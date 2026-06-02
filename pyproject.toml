@@ -1,0 +1,43 @@
+[project]
+name = "amanuense"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Pipeline multi-agente para grafos de conhecimento jurídico"
+
+dependencies = [
+    "anthropic>=0.40.0",
+    "pydantic>=2.7",
+    "pdfplumber>=0.11",
+    "pymupdf>=1.24",
+    "pytesseract>=0.3",
+    "Pillow>=10.0",
+    "networkx>=3.3",
+    "click>=8.1",
+    "python-dotenv>=1.0",
+    "rich>=13.0",
+    "tiktoken>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+amanuense = "pipeline.run:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

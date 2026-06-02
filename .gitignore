@@ -1,0 +1,16 @@
+.env
+corpus/raw/
+corpus/parsed/
+intermediate/
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+.eggs/
+node_modules/
+frontend/dist/
+.DS_Store
+*.log
