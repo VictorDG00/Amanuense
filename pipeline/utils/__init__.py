@@ -1,3 +1,3 @@
-from .claude_client import ClaudeClient
+from .claude_client import LLMClient, ClaudeClient
 
-__all__ = ["ClaudeClient"]
+__all__ = ["LLMClient", "ClaudeClient"]

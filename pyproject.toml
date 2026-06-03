@@ -5,7 +5,7 @@ requires-python = ">=3.11"
 description = "Pipeline multi-agente para grafos de conhecimento jurídico"
 
 dependencies = [
-    "anthropic>=0.40.0",
+    "openai>=1.40.0",
     "pydantic>=2.7",
     "pdfplumber>=0.11",
     "pymupdf>=1.24",
