@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amanuense — Vade Mecum do Futuro</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<!-- D3.js v7 -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+<!-- Graph data injected by graph-builder -->
+<script src="../output/graph-data.js" onerror="console.warn('graph-data.js not found')"></script>
+<script src="../output/vigency-data.js" onerror="console.warn('vigency-data.js not found')"></script>
+</head>
+<body>
+
+<!-- ── LOADING ── -->
+<div id="loading">
+  <h2>Vade Mecum do Futuro</h2>
+  <p>Carregando grafo normativo…</p>
+</div>
+
+<!-- ── SIDEBAR ── -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="eyebrow">Amanuense</div>
+    <h1>Vade Mecum<br><em>do Futuro</em></h1>
+    <div class="version">Grafos de Correlações Normativas</div>
+  </div>
+
+  <div id="search-box">
+    <input id="search-input" type="text" placeholder="Buscar artigo, norma, conceito…">
+    <div id="search-results"></div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Visualizações</div>
+    <button class="sidebar-btn active" data-view="graph">
+      <span class="icon">⬡</span> Grafo de Correlações
+    </button>
+    <button class="sidebar-btn" data-view="hierarchy">
+      <span class="icon">▲</span> Pirâmide Normativa
+    </button>
+    <button class="sidebar-btn" data-view="role">
+      <span class="icon">◎</span> Por Papel Regulatório
+    </button>
+    <button class="sidebar-btn" data-view="timeline">
+      <span class="icon">⟳</span> Linha do Tempo
+    </button>
+    <button class="sidebar-btn" data-view="tour">
+      <span class="icon">▶</span> Tour Guiado
+    </button>
+  </div>
+
+  <hr class="sidebar-divider">
+
+  <div id="filter-panel">
+    <div class="sidebar-section-label" style="padding:0 0 6px">Filtros (Grafo)</div>
+
+    <label for="filter-node-type">Tipo de nó</label>
+    <select id="filter-node-type">
+      <option value="all">Todos</option>
+    </select>
+
+    <label for="filter-status">Vigência</label>
+    <select id="filter-status">
+      <option value="all">Todos</option>
+      <option value="vigente">Vigente</option>
+      <option value="alterado">Alterado</option>
+      <option value="revogado">Revogado</option>
+      <option value="suspenso">Suspenso</option>
+    </select>
+
+    <label for="filter-edge-type">Tipo de aresta</label>
+    <select id="filter-edge-type">
+      <option value="all">Todas</option>
+    </select>
+
+    <label for="filter-implicit">Arestas implícitas</label>
+    <select id="filter-implicit">
+      <option value="all">Todas</option>
+      <option value="false">Apenas explícitas</option>
+      <option value="true">Apenas implícitas</option>
+    </select>
+
+    <label for="filter-weight">Peso mínimo: <span id="filter-weight-val">0.0</span></label>
+    <input type="range" id="filter-weight" min="0" max="1" step="0.1" value="0">
+  </div>
+
+  <div id="stats-bar"></div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <!-- Graph View -->
+  <div id="graph-view" class="view active" style="flex-direction:row">
+    <div id="graph-canvas"></div>
+    <aside id="node-panel">
+      <div id="node-panel-header">
+        <button id="panel-close-btn" title="Fechar">✕</button>
+        <div id="node-panel-title"></div>
+        <div id="node-panel-type"></div>
+      </div>
+      <div id="node-panel-body"></div>
+      <div id="node-text-section" style="padding:0 16px 16px">
+        <div class="panel-section-label" style="margin-bottom:8px">Texto do Dispositivo</div>
+        <pre id="node-text-pre"></pre>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Hierarchy View -->
+  <div id="hierarchy-view" class="view">
+    <div style="padding:28px 32px 16px;background:white;border-bottom:1px solid #e2d8c8">
+      <h2 style="font-family:'EB Garamond',serif;font-size:32px;color:#0f2340">Pirâmide Normativa</h2>
+      <p style="font-size:15px;color:#7a8fa0;margin-top:4px">Hierarquia das normas do corpus por nível regulatório</p>
+    </div>
+    <div id="hierarchy-container" style="padding:24px 32px;overflow-y:auto;flex:1"></div>
+  </div>
+
+  <!-- Role View -->
+  <div id="role-view" class="view">
+    <div style="padding:28px 32px 16px;background:white;border-bottom:1px solid #e2d8c8">
+      <div class="role-view-header">
+        <div>
+          <h2 style="font-family:'EB Garamond',serif;font-size:32px;color:#0f2340">Obrigações por Papel</h2>
+          <p style="font-size:15px;color:#7a8fa0;margin-top:4px">Todas as normas que afetam um participante regulatório</p>
+        </div>
+        <select id="role-select">
+          <option value="">Selecionar papel…</option>
+        </select>
+      </div>
+    </div>
+    <div id="role-obligations" style="padding:24px 32px;overflow-y:auto;flex:1"></div>
+  </div>
+
+  <!-- Timeline View -->
+  <div id="timeline-view" class="view">
+    <div style="padding:28px 32px 16px;background:white;border-bottom:1px solid #e2d8c8">
+      <h2 style="font-family:'EB Garamond',serif;font-size:32px;color:#0f2340">Linha do Tempo Regulatória</h2>
+      <p style="font-size:15px;color:#7a8fa0;margin-top:4px">Histórico de alterações e revogações normativas</p>
+    </div>
+    <div id="timeline-container" style="padding:24px 32px;overflow-y:auto;flex:1"></div>
+  </div>
+
+  <!-- Tour View -->
+  <div id="tour-view" class="view">
+    <div id="tour-header">
+      <h2>Tour Guiado</h2>
+      <select id="tour-select">
+        <option value="">Selecionar tour…</option>
+      </select>
+    </div>
+    <div id="tour-body">
+      <div id="tour-steps-panel"></div>
+      <div id="tour-content"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TOOLTIP ── -->
+<div id="tooltip"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
