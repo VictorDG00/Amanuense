@@ -124,3 +124,45 @@ ANAFORA_RE = re.compile(
     r'supracitad[ao]|já\s+referid[ao]|o\s+artigo\s+anterior)\b',
     re.IGNORECASE,
 )
+
+# ── Cross-Document Reference Extraction ─────────────────────────────────────────
+
+# Captures "Art. N" with optional document reference: "da Resolução BCB nº 1/2020"
+CROSS_REF_RE = re.compile(
+    r'(?:arts?\.\s*(\d+(?:-[A-Z])?)[º°]?'
+    r'(?:\s*[,e]\s*(?:arts?\.)?\s*\d+)*)'
+    r'(?:\s+(?:d[ao]|da|do)\s+'
+    r'(?:Resolução|Circular|Instrução\s+Normativa?|Portaria|Deliberação)\s+'
+    r'(?:BCB\s*|CMN\s*)?(?:n[º°]?\s*)?(\d+[\./]\d{2,4}|\d+))?',
+    re.IGNORECASE,
+)
+
+# Detects norm that "regulamenta" another norm
+REGULAMENTA_RE = re.compile(
+    r'regulamenta(?:ndo|r|m)?\s+'
+    r'(?:o\s+disposto\s+(?:n[ao]|em|na|no)\s+|a\s+|o\s+)?'
+    r'(?:Resolução|Circular|Instrução|Portaria|Lei)',
+    re.IGNORECASE,
+)
+
+# Explicit legal definitions: "considera-se X" / "entende-se por X" / "denomina-se X"
+DEFINICAO_RE = re.compile(
+    r'(?:considera[m]?-se|entende[m]?-se\s+por|significa[m]?|'
+    r'denomina[m]?-se|é\s+(?:o|a)\s+(?:conjunto|processo|sistema|mecanismo|serviço|meio))'
+    r'\s+["“]?([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][^\n”"]{3,80})',
+    re.IGNORECASE,
+)
+
+# Normative deadlines: "prazo de N dias úteis", "até 10 segundos", "D+0", "D+1"
+PRAZO_RE = re.compile(
+    r'(?:'
+    r'prazo\s+(?:máximo\s+)?de\s+(\d+(?:[,.]\d+)?)\s+'
+    r'(segundos?|minutos?|horas?|dias?\s+(?:úteis?|corridos?|dias?)?|meses?|anos?)'
+    r'|até\s+(\d+(?:[,.]\d+)?)\s+'
+    r'(segundos?|minutos?|horas?|dias?\s+(?:úteis?|corridos?)?|meses?)'
+    r'|em\s+até\s+(\d+(?:[,.]\d+)?)\s+'
+    r'(segundos?|minutos?|horas?|dias?\s+(?:úteis?|corridos?)?)'
+    r'|(D\+\d+)'
+    r')',
+    re.IGNORECASE,
+)

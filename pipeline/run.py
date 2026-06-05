@@ -15,6 +15,7 @@ AGENT_SEQUENCE = [
     "revocation-analyzer",
     "implication-analyzer",
     "domain-analyzer",
+    "graph-builder",
     "graph-reviewer",
     "tour-builder",
 ]
@@ -54,12 +55,44 @@ def run(agent: str | None, run_id: str | None, resume: bool, file: str | None) -
 
 
 def _run_agent(name: str, intermediate_dir: Path) -> None:
-    from .config import CORPUS_DIR
+    from .config import CORPUS_DIR, OUTPUT_DIR
     console.print(f"[bold]→[/bold] {name}")
 
     if name == "corpus-scanner":
         from .agents.corpus_scanner import CorpusScannerAgent
         CorpusScannerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "norm-analyzer":
+        from .agents.norm_analyzer import NormAnalyzerAgent
+        NormAnalyzerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "hierarchy-analyzer":
+        from .agents.hierarchy_analyzer import HierarchyAnalyzerAgent
+        HierarchyAnalyzerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "revocation-analyzer":
+        from .agents.revocation_analyzer import RevocationAnalyzerAgent
+        RevocationAnalyzerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "implication-analyzer":
+        from .agents.implication_analyzer import ImplicationAnalyzerAgent
+        ImplicationAnalyzerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "domain-analyzer":
+        from .agents.domain_analyzer import DomainAnalyzerAgent
+        DomainAnalyzerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "graph-builder":
+        from .graph.builder import GraphBuilder
+        builder = GraphBuilder(intermediate_dir)
+        builder.load_agents()
+        builder.apply_vigency_updates()
+        graph = builder.build()
+        errors = builder.validate(graph)
+        if errors:
+            for err in errors:
+                console.print(f"[yellow]⚠[/yellow]  {err}")
+        builder.save(graph, OUTPUT_DIR)
+    elif name == "graph-reviewer":
+        from .agents.graph_reviewer import GraphReviewerAgent
+        GraphReviewerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "tour-builder":
+        from .agents.tour_builder import TourBuilderAgent
+        TourBuilderAgent().run(intermediate_dir, CORPUS_DIR)
     else:
         console.print(f"[dim]  (agent '{name}' not yet implemented)[/dim]")
 
@@ -93,6 +126,24 @@ def validate(graph_path: str) -> None:
         f"[green]OK[/green] — {len(node_ids)} nodes, "
         f"{len(data.get('edges', []))} edges, "
         f"{review_count} pending review"
+    )
+
+
+@cli.command()
+@click.option("--port", default=8080, help="HTTP server port")
+def serve(port: int) -> None:
+    """Serve the frontend viewer at http://localhost:<port>"""
+    import subprocess, sys, webbrowser
+    from pathlib import Path as _Path
+    frontend_dir = _Path(__file__).parent.parent / "frontend"
+    if not frontend_dir.exists():
+        console.print("[red]ERROR:[/red] frontend/ directory not found — build the frontend first")
+        return
+    console.print(f"[bold blue]Serving[/bold blue] http://localhost:{port}")
+    console.print("[dim]Press Ctrl+C to stop[/dim]")
+    webbrowser.open(f"http://localhost:{port}/index.html")
+    subprocess.run(
+        [sys.executable, "-m", "http.server", str(port), "--directory", str(frontend_dir)],
     )
 
 
