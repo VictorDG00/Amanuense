@@ -1,0 +1,13 @@
+services:
+  amanuense:
+    build: .
+    container_name: amanuense
+    restart: always
+    expose:
+      - "80"
+    networks:
+      - vps-proxy
+
+networks:
+  vps-proxy:
+    external: true
