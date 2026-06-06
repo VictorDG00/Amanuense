@@ -3,6 +3,7 @@ import asyncio
 import json
 import queue
 import threading
+from datetime import datetime
 from typing import AsyncGenerator
 
 
@@ -19,14 +20,33 @@ def _execute(run_id: str, q: queue.Queue) -> None:
     def callback(event: dict) -> None:
         q.put(event)
 
+    error_msg: str | None = None
     try:
         from pipeline.run import run_pipeline_with_callback
         run_pipeline_with_callback(run_id, callback)
         _runs[run_id]["status"] = "done"
         q.put({"type": "done"})
     except Exception as e:
+        error_msg = str(e)
         _runs[run_id]["status"] = "error"
-        q.put({"type": "error", "message": str(e)})
+        q.put({"type": "error", "message": error_msg})
+    finally:
+        _update_run_record(run_id, error_msg)
+
+
+def _update_run_record(run_id: str, error_msg: str | None) -> None:
+    try:
+        from db.session import SessionLocal
+        from db.models import PipelineRun
+        with SessionLocal() as db:
+            run = db.get(PipelineRun, run_id)
+            if run:
+                run.status = "error" if error_msg else "done"
+                run.finished_at = datetime.utcnow()
+                run.error_message = error_msg
+                db.commit()
+    except Exception:
+        pass  # DB update is best-effort; don't crash the pipeline thread
 
 
 async def stream_events(run_id: str) -> AsyncGenerator[str, None]:

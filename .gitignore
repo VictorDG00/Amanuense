@@ -19,3 +19,4 @@ venv/
 .python-version
 *.pem
 *.key
+data/

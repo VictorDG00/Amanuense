@@ -8,7 +8,10 @@ COPY pyproject.toml .
 RUN pip install --no-cache-dir -e ".[api]"
 COPY pipeline/ pipeline/
 COPY api/ api/
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+COPY db/ db/
+COPY alembic.ini entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]
 
 # ── Web ────────────────────────────────────────────────────────────────────────
 FROM nginx:alpine AS web

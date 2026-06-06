@@ -26,6 +26,7 @@ services:
       - ./corpus:/app/corpus
       - ./output:/app/output
       - ./intermediate:/app/intermediate
+      - ./data:/app/data
     env_file: .env
     networks:
       - vps-proxy

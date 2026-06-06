@@ -3,29 +3,41 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.orm import Session
 
+from db.models import CorpusDocument, PipelineRun
+from db.session import get_db
 from pipeline.config import CORPUS_DIR, OUTPUT_DIR
-from pipeline.corpus_registry import detect_metadata, load_registry, save_registry
+from pipeline.corpus_registry import detect_metadata, save_registry
 from api.runner import start_run, stream_events
+
 
 app = FastAPI(title="Amanuense API")
 
 
+# ── Corpus ────────────────────────────────────────────────────────────────────
+
 @app.get("/api/corpus")
-def list_corpus():
-    registry = load_registry(CORPUS_DIR)
-    docs = []
-    for doc_id, meta in registry.items():
-        parsed_path = CORPUS_DIR / "parsed" / f"{doc_id}.md"
-        docs.append({"id": doc_id, "parsed": parsed_path.exists(), **meta})
-    return {"documents": docs}
+def list_corpus(db: Session = Depends(get_db)):
+    docs = db.query(CorpusDocument).all()
+    result = []
+    for doc in docs:
+        parsed_path = CORPUS_DIR / "parsed" / f"{doc.id}.md"
+        result.append({
+            "id": doc.id,
+            "parsed": parsed_path.exists(),
+            **doc.to_registry_dict(),
+        })
+    return {"documents": result}
 
 
 @app.post("/api/corpus/upload")
-async def upload_corpus(files: list[UploadFile] = File(...)):
-    registry = load_registry(CORPUS_DIR)
+async def upload_corpus(
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+):
     raw_dir = CORPUS_DIR / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -35,22 +47,28 @@ async def upload_corpus(files: list[UploadFile] = File(...)):
         doc_id = stem.lower().replace("_", "-")
         dest = raw_dir / f"{doc_id}.pdf"
         dest.write_bytes(await file.read())
+
         meta = detect_metadata(stem)
-        registry[doc_id] = meta
+        existing = db.get(CorpusDocument, doc_id)
+        if existing:
+            for k, v in meta.items():
+                setattr(existing, _meta_to_col(k), v)
+        else:
+            db.add(CorpusDocument(id=doc_id, **_meta_to_model(meta)))
         added.append({"id": doc_id, **meta})
 
-    save_registry(CORPUS_DIR, registry)
+    db.commit()
     return {"added": added}
 
 
 @app.delete("/api/corpus/{doc_id}")
-def remove_corpus(doc_id: str):
-    registry = load_registry(CORPUS_DIR)
-    if doc_id not in registry:
+def remove_corpus(doc_id: str, db: Session = Depends(get_db)):
+    doc = db.get(CorpusDocument, doc_id)
+    if not doc:
         raise HTTPException(404, "Document not found")
 
-    del registry[doc_id]
-    save_registry(CORPUS_DIR, registry)
+    db.delete(doc)
+    db.commit()
 
     for path in [
         CORPUS_DIR / "raw" / f"{doc_id}.pdf",
@@ -62,14 +80,39 @@ def remove_corpus(doc_id: str):
     return {"deleted": doc_id}
 
 
+# ── Pipeline ──────────────────────────────────────────────────────────────────
+
 @app.post("/api/run")
-def run_pipeline():
-    registry = load_registry(CORPUS_DIR)
-    if not registry:
+def run_pipeline(db: Session = Depends(get_db)):
+    docs = db.query(CorpusDocument).all()
+    if not docs:
         raise HTTPException(400, "Corpus vazio — faça upload de documentos primeiro")
+
+    # Sync DB → registry.json so the pipeline can read it
+    registry = {doc.id: doc.to_registry_dict() for doc in docs}
+    save_registry(CORPUS_DIR, registry)
+
     run_id = datetime.now().strftime("%Y%m%dT%H%M%S")
+    db.add(PipelineRun(id=run_id))
+    db.commit()
+
     start_run(run_id)
     return {"run_id": run_id}
+
+
+@app.get("/api/runs")
+def list_runs(db: Session = Depends(get_db)):
+    runs = db.query(PipelineRun).order_by(PipelineRun.started_at.desc()).limit(20).all()
+    return {"runs": [
+        {
+            "id": r.id,
+            "status": r.status,
+            "started_at": r.started_at.isoformat() if r.started_at else None,
+            "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+            "error_message": r.error_message,
+        }
+        for r in runs
+    ]}
 
 
 @app.get("/api/status/{run_id}")
@@ -94,3 +137,26 @@ def get_graph():
     if not data.get("nodes"):
         raise HTTPException(404, "Grafo vazio — execute o pipeline primeiro")
     return JSONResponse(data)
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _meta_to_col(key: str) -> str:
+    return {
+        "dataPublicacao": "data_publicacao",
+        "dataVigor": "data_vigor",
+        "vigencyStatus": "vigency_status",
+    }.get(key, key)
+
+
+def _meta_to_model(meta: dict) -> dict:
+    return {
+        "authority": meta.get("authority", "BCB"),
+        "type": meta.get("type", "resolucao"),
+        "number": meta.get("number"),
+        "year": meta.get("year", datetime.now().year),
+        "data_publicacao": meta.get("dataPublicacao", ""),
+        "data_vigor": meta.get("dataVigor", ""),
+        "vigency_status": meta.get("vigencyStatus", "vigente"),
+        "description": meta.get("description", ""),
+    }
