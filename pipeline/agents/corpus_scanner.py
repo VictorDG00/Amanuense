@@ -1,5 +1,6 @@
 from __future__ import annotations
 import hashlib
+import re
 from datetime import date, datetime
 from pathlib import Path
 from .base import BaseAgent, console
@@ -10,6 +11,50 @@ def _file_hash(path: Path) -> str:
     h = hashlib.sha256()
     h.update(path.read_bytes())
     return h.hexdigest()[:16]
+
+
+def _clean_text(text: str) -> str:
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'(\w)-\n(\w)', r'\1\2', text)
+    return text.strip()
+
+
+def _pdf_to_markdown(pdf_path: Path) -> str:
+    try:
+        import pdfplumber
+        pages: list[str] = []
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text(x_tolerance=2, y_tolerance=2) or ""
+                pages.append(text)
+        result = _clean_text("\n\n".join(pages))
+        if len(result.strip()) >= 100:
+            return result
+    except Exception:
+        pass
+
+    import fitz
+    doc = fitz.open(str(pdf_path))
+    pages = [page.get_text("text") for page in doc]
+    doc.close()
+    return _clean_text("\n\n".join(pages))
+
+
+def _ensure_parsed(raw_file: Path, parsed_path: Path, doc_id: str) -> bool:
+    if parsed_path.exists():
+        return True
+    try:
+        text = _pdf_to_markdown(raw_file)
+        if len(text.strip()) < 50:
+            console.print(f"[yellow]⚠[/yellow]  {doc_id}: texto extraído muito curto, PDF pode ser imagem")
+            return False
+        parsed_path.parent.mkdir(parents=True, exist_ok=True)
+        parsed_path.write_text(text, encoding="utf-8")
+        console.print(f"[green]✓[/green]  {doc_id}: PDF convertido ({len(text)} chars)")
+        return True
+    except Exception as e:
+        console.print(f"[red]✗[/red]  {doc_id}: falha ao converter PDF — {e}")
+        return False
 
 
 class CorpusScannerAgent(BaseAgent):
@@ -50,6 +95,11 @@ class CorpusScannerAgent(BaseAgent):
                 raw_file = raw_file_md
 
             parsed_path = parsed_dir / f"{doc_id}.md"
+
+            # Auto-convert PDF to Markdown if not done yet
+            if raw_file.suffix.lower() == ".pdf":
+                _ensure_parsed(raw_file, parsed_path, doc_id)
+
             file_hash = _file_hash(raw_file)
             hashes[str(raw_file.relative_to(corpus_dir))] = file_hash
 

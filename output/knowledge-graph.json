@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generatedAt": "2026-06-06T02:57:51.479645",
+  "generatedAt": "2026-06-06T03:00:18.242801",
   "corpus": "pix-bcb",
   "nodes": [
     {
@@ -262,6 +262,284 @@
   ],
   "edges": [],
   "layers": [],
-  "tours": [],
+  "tours": [
+    {
+      "id": "tour-fundamentos-pix",
+      "title": "Fundamentos do Pix: Atores e Estrutura Regulatória",
+      "description": "Roteiro introdutório que apresenta o ecossistema do Pix, seus participantes e as entidades que o regulam.",
+      "profileTarget": [
+        "advogado",
+        "compliance",
+        "gestor"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "O Órgão Regulador Principal",
+          "description": "O Banco Central do Brasil (BCB) é o gestor do arranjo Pix e o principal regulador do sistema de pagamentos instantâneos. Este passo apresenta o BCB como entidade central na definição de normas e supervisão do arranjo.",
+          "nodeIds": [
+            "papel:bcb",
+            "ent:bcb",
+            "papel:banco-central-do-brasil"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Gestão e Operação do Arranjo",
+          "description": "O Gestor do Arranjo Pix é o responsável por estabelecer as regras operacionais e garantir o funcionamento do sistema. O DICT (Diretório de Identificadores de Contas Transacionais) é a infraestrutura central que armazena as chaves Pix.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo",
+            "ent:dict"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Os Participantes do Arranjo",
+          "description": "Os PSPs Diretos e Indiretos são os principais participantes do arranjo, responsáveis por oferecer o serviço de pagamento aos usuários. Este passo mapeia os papéis de cada participante na cadeia.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Provedores de Serviços Complementares",
+          "description": "Os ITPs (Iniciadores de Transação de Pagamento) e os Iniciadores de Transação de Pagamento são facilitadores que permitem a iniciação de pagamentos a partir de terceiros, ampliando o ecossistema de serviços.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Usuários Finais do Sistema",
+          "description": "Os Usuários Finais Pagadores e Recebedores são o público central do Pix, utilizando o sistema para transferências e recebimentos. Este passo contextualiza o consumidor dentro do framework regulatório.",
+          "nodeIds": [
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        },
+        {
+          "order": 6,
+          "title": "Entidades de Infraestrutura e Mercado",
+          "description": "O CMN (Conselho Monetário Nacional) estabelece diretrizes macro, enquanto a CIP, FEBRABAN e STR atuam na infraestrutura e representação do mercado financeiro. Este passo mostra como essas entidades se integram ao arranjo Pix.",
+          "nodeIds": [
+            "ent:cmn",
+            "ent:cip",
+            "ent:febraban",
+            "ent:str"
+          ]
+        },
+        {
+          "order": 7,
+          "title": "O Sistema Financeiro Nacional como Pano de Fundo",
+          "description": "O Pix opera dentro do Sistema Financeiro Nacional (SFN), que fornece a base regulatória e operacional para todo o ecossistema de pagamentos brasileiro. Este passo encerra o tour com uma visão sistêmica.",
+          "nodeIds": [
+            "ent:sfn"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-compliance-regulatorio",
+      "title": "Compliance no Pix: Obrigações e Responsabilidades",
+      "description": "Roteiro focado em requisitos regulatórios, deveres de compliance e a participação dos atores no cumprimento das normas do Pix.",
+      "profileTarget": [
+        "compliance",
+        "advogado"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "O Regulador e seus Poderes",
+          "description": "O BCB, como entidade reguladora, define as regras de compliance que devem ser seguidas por todos os participantes. Conhecer o BCB é o primeiro passo para entender as obrigações normativas.",
+          "nodeIds": [
+            "ent:bcb"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Delegação de Responsabilidades",
+          "description": "O Gestor do Arranjo Pix tem a responsabilidade de implementar as diretrizes do BCB e assegurar a conformidade dos participantes. Este passo detalha o papel do gestor na supervisão do arranjo.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Os PSPs Diretos na Linha de Frente",
+          "description": "Os PSPs Diretos são os principais responsáveis perante o regulador pelo cumprimento das regras, incluindo KYC, prevenção à lavagem de dinheiro e segurança operacional.",
+          "nodeIds": [
+            "papel:psp-direto"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Rede de PSPs Indiretos",
+          "description": "Os PSPs Indiretos atuam em cadeia, devendo igualmente cumprir as normas, porém com responsabilidades delegadas pelo PSP Direto que os credencia. Compliance deve garantir a rastreabilidade em toda a cadeia.",
+          "nodeIds": [
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Novos Participantes e Riscos Regulatórios",
+          "description": "ITPs e Iniciadores de Pagamento introduzem novos riscos de fraude e conformidade. Este passo aborda as obrigações específicas desses atores, como autenticação do usuário e consentimento.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 6,
+          "title": "Contrapartes e Infraestrutura de Compliance",
+          "description": "Entidades como CIP, FEBRABAN e o DICT apoiam a governança e a padronização de procedimentos de compliance. Conhecer essas entidades é crucial para monitorar riscos sistêmicos.",
+          "nodeIds": [
+            "ent:cip",
+            "ent:febraban",
+            "ent:dict"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-arquitetura-operacional",
+      "title": "Arquitetura e Operação do Pix",
+      "description": "Roteiro técnico-operacional que detalha a infraestrutura e os papéis dos participantes no funcionamento cotidiano do Pix.",
+      "profileTarget": [
+        "tecnico",
+        "gestor"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "Infraestrutura Regulatória Central",
+          "description": "O BCB e o CMN fornecem a base regulatória que define como o sistema Pix deve operar. Este passo apresenta as entidades que validam e supervisionam a operação técnica.",
+          "nodeIds": [
+            "ent:bcb",
+            "ent:cmn"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Gestão do Arranjo e Liquidação",
+          "description": "O Gestor do Arranjo gerencia as regras operacionais, enquanto o STR (Sistema de Transferência de Reservas) realiza a liquidação financeira. Este passo é essencial para entender como as transações são concluídas.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo",
+            "ent:str"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "O Diretório Central de Chaves",
+          "description": "O DICT é a base de dados central que armazena e gerencia as chaves Pix, viabilizando a resolução de identificadores para contas. Toda transação Pix depende tecnicamente deste sistema.",
+          "nodeIds": [
+            "ent:dict"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "PSPs e a Camada de Conexão",
+          "description": "PSPs Diretos conectam-se diretamente ao DICT e ao STR, enquanto PSPs Indiretos dependem de um PSP Direto para acesso. Este passo detalha a hierarquia técnica de conectividade.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Iniciadores e Facilitadores de Pagamento",
+          "description": "ITPs e Iniciadores de Transação de Pagamento operam como camada de interface entre o usuário e o PSP, utilizando APIs para iniciar pagamentos sem a necessidade de redirecionamento.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 6,
+          "title": "Participantes Finais e a Experiência do Usuário",
+          "description": "Os Usuários Finais Pagadores e Recebedores interagem com o sistema por meio dos PSPs. Compreender seus papéis é vital para desenhar interfaces e protocolos de segurança.",
+          "nodeIds": [
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        },
+        {
+          "order": 7,
+          "title": "Entidades de Apoio e Mercado",
+          "description": "A CIP e a FEBRABAN oferecem serviços de compensação, regras de mercado e representação, impactando diretamente a operação do Pix. Este passo mostra como essas entidades se encaixam no ecossistema técnico.",
+          "nodeIds": [
+            "ent:cip",
+            "ent:febraban",
+            "ent:sfn"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-gestao-de-riscos-e-supervisao",
+      "title": "Gestão de Riscos e Supervisão no Pix",
+      "description": "Roteiro voltado para profissionais de compliance e gestores que precisam entender a estrutura de supervisão e os atores envolvidos na mitigação de riscos no arranjo Pix.",
+      "profileTarget": [
+        "compliance",
+        "gestor"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "O Supervisor Principal",
+          "description": "O BCB, como supervisor do Sistema Financeiro Nacional, é o órgão responsável por monitorar continuamente o cumprimento das regras do Pix, com poderes para aplicar sanções e determinar correções.",
+          "nodeIds": [
+            "ent:bcb",
+            "papel:bcb"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Diretrizes Macrop...",
+          "description": "O CMN define as políticas macroeconômicas e regulatórias que impactam o risco sistêmico do Pix, como limites de transações e requisitos de capital para participantes.",
+          "nodeIds": [
+            "ent:cmn"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Gestão Operacional de Riscos",
+          "description": "O Gestor do Arranjo é responsável por implementar controles operacionais, como mecanismos antifraude e planos de continuidade de negócios, para mitigar riscos no ecossistema.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Responsabilidade Compartilhada na Cadeia",
+          "description": "PSPs Diretos e Indiretos têm responsabilidades distintas na gestão de riscos, incluindo prevenção a fraudes, segurança cibernética e conformidade com a LGPD. Este passo detalha a alocação de riscos.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Riscos Introduzidos por Terceiros",
+          "description": "ITPs e Iniciadores de Pagamento podem introduzir riscos operacionais e de segurança adicionais. O compliance deve assegurar que esses agentes observem as mesmas regras de segurança que os PSPs tradicionais.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 6,
+          "title": "Entidades de Apoio à Supervisão",
+          "description": "A CIP, a FEBRABAN e o STR atuam como provedores de infraestrutura que auxiliam na detecção e reporte de anomalias, sendo parceiras importantes na supervisão do arranjo.",
+          "nodeIds": [
+            "ent:cip",
+            "ent:febraban",
+            "ent:str"
+          ]
+        }
+      ]
+    }
+  ],
   "meta": {}
 }

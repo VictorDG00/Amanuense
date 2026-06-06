@@ -136,7 +136,11 @@ def get_graph():
     data = json.loads(graph_path.read_text(encoding="utf-8"))
     if not data.get("nodes"):
         raise HTTPException(404, "Grafo vazio — execute o pipeline primeiro")
-    return JSONResponse(data)
+    # Converte para formato D3 (nodes + links) que o frontend espera
+    from pipeline.schemas import KnowledgeGraph
+    from pipeline.graph.exporter import to_d3_json
+    graph = KnowledgeGraph.model_validate(data)
+    return JSONResponse(to_d3_json(graph))
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

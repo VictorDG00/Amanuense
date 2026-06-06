@@ -149,7 +149,29 @@ def test_graph_not_found(client):
 
 
 def test_graph_returns_data(client, tmp_path):
-    graph = {"nodes": [{"id": "n1"}], "links": [], "layers": [], "tours": []}
+    from datetime import datetime
+    graph = {
+        "generatedAt": datetime.now().isoformat(),
+        "corpus": "test",
+        "nodes": [{
+            "id": "norma:resolucao-bcb-001-2020",
+            "type": "norma",
+            "name": "Resolução BCB 001",
+            "summary": "Regulamento Pix",
+            "tags": [],
+            "normativeLayer": "resolucao",
+            "sourceDocument": "resolucao-bcb-001-2020",
+            "review_required": False,
+            "vigenciaMeta": {
+                "dataInicio": "2020-11-12",
+                "status": "vigente",
+                "ultimaVerificacao": "2026-01-01",
+            },
+        }],
+        "edges": [],
+        "layers": [],
+        "tours": [],
+    }
     (tmp_path / "output" / "knowledge-graph.json").write_text(json.dumps(graph))
 
     import api.main as main_mod
@@ -157,7 +179,10 @@ def test_graph_returns_data(client, tmp_path):
 
     resp = client.get("/api/graph")
     assert resp.status_code == 200
-    assert resp.json()["nodes"][0]["id"] == "n1"
+    data = resp.json()
+    assert "nodes" in data
+    assert "links" in data  # D3 format
+    assert data["nodes"][0]["id"] == "norma:resolucao-bcb-001-2020"
 
 
 # ── GET /api/runs ─────────────────────────────────────────────────────────────
