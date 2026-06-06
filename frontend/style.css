@@ -587,7 +587,7 @@ svg text { pointer-events: none; }
 .corpus-empty {
   padding: 8px 8px 10px;
   font-size: 12px;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.9);
   font-style: italic;
 }
 
@@ -597,7 +597,7 @@ svg text { pointer-events: none; }
   padding: 8px 12px;
   background: rgba(184,135,10,0.12);
   border: 1px dashed rgba(184,135,10,0.5);
-  color: var(--gold-light);
+  color: white;
   font-family: 'Crimson Pro', serif;
   font-size: 13px;
   cursor: pointer;
