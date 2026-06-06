@@ -1,12 +1,38 @@
 from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 import click
 from rich.console import Console
 from dotenv import load_dotenv
 
 load_dotenv()
 console = Console()
+
+
+def run_pipeline_with_callback(
+    run_id: str,
+    callback: Callable[[dict], None],
+    agents: list[str] | None = None,
+) -> None:
+    """Programmatic pipeline entry point used by the API."""
+    from .config import INTERMEDIATE_DIR, OUTPUT_DIR
+
+    intermediate_dir = INTERMEDIATE_DIR / run_id
+    intermediate_dir.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    agents_to_run = agents or AGENT_SEQUENCE
+    total = len(agents_to_run)
+
+    for i, agent_name in enumerate(agents_to_run):
+        callback({"type": "agent_start", "agent": agent_name, "index": i, "total": total})
+        try:
+            _run_agent(agent_name, intermediate_dir)
+            callback({"type": "agent_done", "agent": agent_name, "index": i, "total": total})
+        except Exception as e:
+            callback({"type": "agent_error", "agent": agent_name, "message": str(e)})
+            raise RuntimeError(f"Agent '{agent_name}' failed: {e}") from e
 
 AGENT_SEQUENCE = [
     "corpus-scanner",

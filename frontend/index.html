@@ -6,13 +6,7 @@
 <title>Amanuense — Vade Mecum do Futuro</title>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-
-<!-- D3.js v7 -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-
-<!-- Graph data injected by graph-builder -->
-<script src="../output/graph-data.js" onerror="console.warn('graph-data.js not found')"></script>
-<script src="../output/vigency-data.js" onerror="console.warn('vigency-data.js not found')"></script>
 </head>
 <body>
 
@@ -29,6 +23,23 @@
     <h1>Vade Mecum<br><em>do Futuro</em></h1>
     <div class="version">Grafos de Correlações Normativas</div>
   </div>
+
+  <!-- CORPUS -->
+  <div class="sidebar-section" id="corpus-section">
+    <div class="sidebar-section-label">Corpus</div>
+    <div id="corpus-list"></div>
+    <label class="corpus-upload-btn" for="file-input">+ Adicionar PDFs
+      <input type="file" id="file-input" accept=".pdf" multiple hidden>
+    </label>
+    <button id="run-btn" class="run-btn">▶ Executar Pipeline</button>
+
+    <div id="progress-panel" class="hidden">
+      <div id="progress-agent"></div>
+      <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
+    </div>
+  </div>
+
+  <hr class="sidebar-divider">
 
   <div id="search-box">
     <input id="search-input" type="text" placeholder="Buscar artigo, norma, conceito…">
@@ -95,8 +106,17 @@
 <!-- ── MAIN ── -->
 <div id="main">
 
+  <!-- Empty state -->
+  <div id="empty-view" class="view active">
+    <div class="empty-state">
+      <div class="empty-icon">⬡</div>
+      <h2>Nenhum grafo encontrado</h2>
+      <p>Faça upload dos PDFs das normas jurídicas no painel lateral e execute o pipeline para gerar o grafo de conhecimento.</p>
+    </div>
+  </div>
+
   <!-- Graph View -->
-  <div id="graph-view" class="view active" style="flex-direction:row">
+  <div id="graph-view" class="view" style="flex-direction:row">
     <div id="graph-canvas"></div>
     <aside id="node-panel">
       <div id="node-panel-header">
@@ -162,7 +182,6 @@
 
 </div>
 
-<!-- ── TOOLTIP ── -->
 <div id="tooltip"></div>
 
 <script src="app.js"></script>
