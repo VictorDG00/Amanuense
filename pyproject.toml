@@ -24,6 +24,13 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
 ]
+api = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+]
 
 [project.scripts]
 amanuense = "pipeline.run:main"

@@ -1,0 +1,36 @@
+services:
+  amanuense:
+    build:
+      context: .
+      target: web
+    container_name: amanuense
+    restart: always
+    expose:
+      - "80"
+    volumes:
+      - ./output:/app/output
+    depends_on:
+      - amanuense-api
+    networks:
+      - vps-proxy
+
+  amanuense-api:
+    build:
+      context: .
+      target: api
+    container_name: amanuense-api
+    restart: always
+    expose:
+      - "8000"
+    volumes:
+      - ./corpus:/app/corpus
+      - ./output:/app/output
+      - ./intermediate:/app/intermediate
+      - ./data:/app/data
+    env_file: .env
+    networks:
+      - vps-proxy
+
+networks:
+  vps-proxy:
+    external: true

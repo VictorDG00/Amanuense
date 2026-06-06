@@ -1,505 +1,8 @@
 {
   "version": "1.0",
-  "generatedAt": "2026-06-05T16:01:51.264465",
+  "generatedAt": "2026-06-06T03:06:52.651775",
   "corpus": "pix-bcb",
   "nodes": [
-    {
-      "id": "norma:circular-bcb-3952-2019",
-      "type": "norma",
-      "name": "Regulamenta o arranjo de pagamentos denominado Pix",
-      "summary": "Regulamenta o arranjo de pagamentos denominado Pix",
-      "tags": [
-        "circular",
-        "bcb"
-      ],
-      "normativeLayer": "circular",
-      "sourceDocument": "circular-bcb-3952-2019",
-      "articleNumber": null,
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "circular",
-        "numero": "3952",
-        "ano": 2019,
-        "dispositivo": null
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:circular-bcb-3952-2019:1",
-      "type": "artigo",
-      "name": "Art. 1º — circular-bcb-3952-2019",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "circular",
-      "sourceDocument": "circular-bcb-3952-2019",
-      "articleNumber": "1",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "circular",
-        "numero": "3952",
-        "ano": 2019,
-        "dispositivo": "Art. 1º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:circular-bcb-3952-2019:2",
-      "type": "artigo",
-      "name": "Art. 2º — circular-bcb-3952-2019",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "circular",
-      "sourceDocument": "circular-bcb-3952-2019",
-      "articleNumber": "2",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "circular",
-        "numero": "3952",
-        "ano": 2019,
-        "dispositivo": "Art. 2º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:circular-bcb-3952-2019:3",
-      "type": "artigo",
-      "name": "Art. 3º — circular-bcb-3952-2019",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "circular",
-      "sourceDocument": "circular-bcb-3952-2019",
-      "articleNumber": "3",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "circular",
-        "numero": "3952",
-        "ano": 2019,
-        "dispositivo": "Art. 3º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:circular-bcb-3952-2019:4",
-      "type": "artigo",
-      "name": "Art. 4º — circular-bcb-3952-2019",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "circular",
-      "sourceDocument": "circular-bcb-3952-2019",
-      "articleNumber": "4",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "circular",
-        "numero": "3952",
-        "ano": 2019,
-        "dispositivo": "Art. 4º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "norma:resolucao-bcb-001-2020",
-      "type": "norma",
-      "name": "Regulamento do arranjo de pagamentos Pix",
-      "summary": "Regulamento do arranjo de pagamentos Pix",
-      "tags": [
-        "resolucao",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": null,
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": null
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:1",
-      "type": "artigo",
-      "name": "Art. 1º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "1",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 1º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:2",
-      "type": "artigo",
-      "name": "Art. 2º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "2",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 2º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "inc:resolucao-bcb-001-2020:2:I",
-      "type": "inciso",
-      "name": "Art. 2º, inciso I — resolucao-bcb-001-2020",
-      "summary": "Pix: a denominação do arranjo de pagamentos eletrônicos instantâneos;",
-      "tags": [],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "2",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "inc:resolucao-bcb-001-2020:2:II",
-      "type": "inciso",
-      "name": "Art. 2º, inciso II — resolucao-bcb-001-2020",
-      "summary": "Participante Direto: o participante que detém conta PI no Banco Central do Brasil;",
-      "tags": [],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "2",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "inc:resolucao-bcb-001-2020:2:III",
-      "type": "inciso",
-      "name": "Art. 2º, inciso III — resolucao-bcb-001-2020",
-      "summary": "Participante Indireto: o participante que acessa o Pix por intermédio de um Participante Direto.",
-      "tags": [],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "2",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:3",
-      "type": "artigo",
-      "name": "Art. 3º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "3",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 3º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "inc:resolucao-bcb-001-2020:3:I",
-      "type": "inciso",
-      "name": "Art. 3º, inciso I — resolucao-bcb-001-2020",
-      "summary": "participante direto;",
-      "tags": [],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "3",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "inc:resolucao-bcb-001-2020:3:II",
-      "type": "inciso",
-      "name": "Art. 3º, inciso II — resolucao-bcb-001-2020",
-      "summary": "participante indireto; e",
-      "tags": [],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "3",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "inc:resolucao-bcb-001-2020:3:III",
-      "type": "inciso",
-      "name": "Art. 3º, inciso III — resolucao-bcb-001-2020",
-      "summary": "prestador de serviço de iniciação de transação de pagamento.",
-      "tags": [],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "3",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:4",
-      "type": "artigo",
-      "name": "Art. 4º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "4",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 4º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:5",
-      "type": "artigo",
-      "name": "Art. 5º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "5",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 5º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:6",
-      "type": "artigo",
-      "name": "Art. 6º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "6",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 6º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
-    {
-      "id": "art:resolucao-bcb-001-2020:7",
-      "type": "artigo",
-      "name": "Art. 7º — resolucao-bcb-001-2020",
-      "summary": "Artigo regulatório do Pix.",
-      "tags": [
-        "pix",
-        "bcb"
-      ],
-      "normativeLayer": "resolucao",
-      "sourceDocument": "resolucao-bcb-001-2020",
-      "articleNumber": "7",
-      "vigenciaMeta": {
-        "dataInicio": "2020-11-16",
-        "dataFim": null,
-        "status": "vigente",
-        "versaoAtiva": null,
-        "ultimaVerificacao": "2026-06-05"
-      },
-      "normaMeta": {
-        "autoridade": "BCB",
-        "tipoNorma": "resolucao",
-        "numero": "1",
-        "ano": 2020,
-        "dispositivo": "Art. 7º"
-      },
-      "review_required": false,
-      "review_notes": null
-    },
     {
       "id": "papel:psp-direto",
       "type": "papel",
@@ -755,115 +258,180 @@
       "normaMeta": null,
       "review_required": false,
       "review_notes": null
-    },
-    {
-      "id": "prazo:resolucao-bcb-001-2020:4:1",
-      "type": "prazo",
-      "name": "Prazo: até 10 segundos",
-      "summary": "Prazo normativo extraído de art:resolucao-bcb-001-2020:4: até 10 segundos",
-      "tags": [
-        "prazo",
-        "resolucao"
-      ],
-      "normativeLayer": null,
-      "sourceDocument": null,
-      "articleNumber": null,
-      "vigenciaMeta": null,
-      "normaMeta": null,
-      "review_required": false,
-      "review_notes": null
     }
   ],
-  "edges": [
+  "edges": [],
+  "layers": [],
+  "tours": [
     {
-      "id": "art:resolucao-bcb-001-2020:4--condiciona--prazo:resolucao-bcb-001-2020:4:1",
-      "source": "art:resolucao-bcb-001-2020:4",
-      "target": "prazo:resolucao-bcb-001-2020:4:1",
-      "type": "condiciona",
-      "weight": 0.75,
-      "direction": "forward",
-      "implicit": false,
-      "confidence": null,
-      "textEvidence": "até 10 segundos",
-      "artigos": [],
-      "dataEfeito": null,
-      "description": null,
-      "review_required": false,
-      "deprecated": false,
-      "stale": false
+      "id": "tour-fundamentos-pix",
+      "title": "Fundamentos do Pix",
+      "description": "Roteiro introdutório: o que é o Pix, os papéis regulatórios centrais e as entidades que compõem o arranjo.",
+      "profileTarget": [
+        "gestor",
+        "advogado"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "Entidades Reguladoras e Gestoras",
+          "description": "Conheça o Banco Central do Brasil (BCB), órgão responsável pela regulação e supervisão do Pix, e o CMN, que define diretrizes macroeconômicas para o sistema de pagamentos.",
+          "nodeIds": [
+            "ent:bcb",
+            "ent:cmn"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Gestão e Operação do Arranjo",
+          "description": "O papel do Gestor do Arranjo é central para a governança do Pix. Além disso, entidades como CIP, FEBRABAN e STR apoiam a infraestrutura e a padronização.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo",
+            "ent:cip",
+            "ent:febraban",
+            "ent:str"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Participantes Diretos e Indiretos",
+          "description": "Os PSPs Diretos são os principais participantes do arranjo, enquanto os PSPs Indiretos atuam por meio de um participante direto. Entenda a hierarquia de acesso.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Agentes Facilitadores: ITP e Iniciadores",
+          "description": "O Iniciador de Transação de Pagamento (ITP) oferece serviços de iniciação, ampliando as opções do usuário. O iniciador de transação de pagamento é um papel regulatório específico que facilita a concorrência.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Usuários Finais: Pagadores e Recebedores",
+          "description": "Os usuários finais são o centro do Pix. Pagadores e recebedores têm direitos e deveres definidos pela regulação, garantindo segurança e eficiência nas transações.",
+          "nodeIds": [
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        }
+      ]
     },
     {
-      "id": "norma:circular-bcb-3952-2019--regulamenta--norma:resolucao-bcb-001-2020",
-      "source": "norma:circular-bcb-3952-2019",
-      "target": "norma:resolucao-bcb-001-2020",
-      "type": "regulamenta",
-      "weight": 0.9,
-      "direction": "forward",
-      "implicit": false,
-      "confidence": null,
-      "textEvidence": null,
-      "artigos": [],
-      "dataEfeito": null,
-      "description": "circular-bcb-3952-2019 regulamenta resolucao-bcb-001-2020",
-      "review_required": true,
-      "deprecated": false,
-      "stale": false
+      "id": "tour-responsabilidades-compliance",
+      "title": "Responsabilidades e Compliance no Pix",
+      "description": "Roteiro para profissionais de compliance e jurídico: obrigações dos participantes, supervisão do BCB e os papéis regulatórios que envolvem maior risco e conformidade.",
+      "profileTarget": [
+        "compliance",
+        "advogado"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "O Papel do BCB na Supervisão",
+          "description": "O BCB é o principal supervisor do arranjo Pix. Todo participante deve cumprir as normas emitidas por ele, sob pena de sanções regulatórias.",
+          "nodeIds": [
+            "papel:bcb",
+            "papel:banco-central-do-brasil",
+            "ent:bcb"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Obrigações dos PSPs Diretos e Indiretos",
+          "description": "PSPs Diretos têm responsabilidade direta perante o BCB, incluindo cumprimento de prazos de liquidação e segurança. PSPs Indiretos dependem dos Diretos, mas também possuem obrigações contratuais e regulatórias.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Iniciadores e ITPs: Conformidade Específica",
+          "description": "Iniciadores e ITPs devem seguir regras de segurança e transparência. O compliance desses agentes é crítico para evitar fraudes e garantir a integridade das transações iniciadas.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Gestão de Riscos e Sanções",
+          "description": "O Gestor do Arranjo e o BCB definem critérios para aplicação de penalidades. Conhecer essas regras é essencial para mitigar riscos legais e operacionais.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Proteção dos Usuários Finais",
+          "description": "Usuários pagadores e recebedores têm direitos garantidos pela regulação. A área de compliance deve assegurar que as políticas internas respeitem esses direitos, especialmente em casos de contestação e devolução.",
+          "nodeIds": [
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        }
+      ]
     },
     {
-      "id": "norma:circular-bcb-3952-2019--subordina_se_a--norma:resolucao-bcb-001-2020",
-      "source": "norma:circular-bcb-3952-2019",
-      "target": "norma:resolucao-bcb-001-2020",
-      "type": "subordina_se_a",
-      "weight": 0.85,
-      "direction": "forward",
-      "implicit": false,
-      "confidence": null,
-      "textEvidence": null,
-      "artigos": [],
-      "dataEfeito": null,
-      "description": "circular subordina-se a resolucao",
-      "review_required": false,
-      "deprecated": false,
-      "stale": false
+      "id": "tour-estrutura-operacional-tecnica",
+      "title": "Estrutura Operacional e Técnica do Pix",
+      "description": "Roteiro voltado para técnicos e engenheiros de sistemas: conheça as entidades e os papéis que compõem a infraestrutura tecnológica do Pix.",
+      "profileTarget": [
+        "tecnico",
+        "gestor"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "Infraestrutura Central: BCB e DICT",
+          "description": "O BCB opera o DICT (Diretório de Identificadores de Contas Transacionais), base de dados central que viabiliza a consulta de chaves Pix. É o coração da camada de identificação.",
+          "nodeIds": [
+            "ent:bcb",
+            "ent:dict"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Liquidação: STR e CIP",
+          "description": "O Sistema de Transferência de Reservas (STR) é utilizado para liquidação das transações Pix. A CIP também pode atuar em processos de compensação.",
+          "nodeIds": [
+            "ent:str",
+            "ent:cip"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Participantes na Rede: PSPs e ITPs",
+          "description": "PSPs Diretos se conectam diretamente ao BCB para enviar e receber transações. ITPs também precisam de conectividade, seja diretamente ou por intermédio de um PSP.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:itp"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Papel dos Iniciadores na Jornada do Pagamento",
+          "description": "O Iniciador de Transação de Pagamento é um agente que pode disparar uma transação sem necessariamente custodiar os fundos, exigindo integração técnica com o PSP do usuário.",
+          "nodeIds": [
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "O Ecossistema SFN e a FEBRABAN",
+          "description": "O Sistema Financeiro Nacional (SFN) é o ambiente regulado onde o Pix opera. A FEBRABAN atua na padronização técnica e em fóruns de discussão entre os participantes.",
+          "nodeIds": [
+            "ent:sfn",
+            "ent:febraban"
+          ]
+        }
+      ]
     }
   ],
-  "layers": [
-    {
-      "id": "layer-resolucao",
-      "name": "Resolução BCB/CMN",
-      "normativeLevel": 3,
-      "nodeIds": [
-        "norma:resolucao-bcb-001-2020",
-        "art:resolucao-bcb-001-2020:1",
-        "art:resolucao-bcb-001-2020:2",
-        "inc:resolucao-bcb-001-2020:2:I",
-        "inc:resolucao-bcb-001-2020:2:II",
-        "inc:resolucao-bcb-001-2020:2:III",
-        "art:resolucao-bcb-001-2020:3",
-        "inc:resolucao-bcb-001-2020:3:I",
-        "inc:resolucao-bcb-001-2020:3:II",
-        "inc:resolucao-bcb-001-2020:3:III",
-        "art:resolucao-bcb-001-2020:4",
-        "art:resolucao-bcb-001-2020:5",
-        "art:resolucao-bcb-001-2020:6",
-        "art:resolucao-bcb-001-2020:7"
-      ],
-      "description": "Nível 3 da hierarquia normativa: Resolução BCB/CMN"
-    },
-    {
-      "id": "layer-circular",
-      "name": "Circular BCB",
-      "normativeLevel": 4,
-      "nodeIds": [
-        "norma:circular-bcb-3952-2019",
-        "art:circular-bcb-3952-2019:1",
-        "art:circular-bcb-3952-2019:2",
-        "art:circular-bcb-3952-2019:3",
-        "art:circular-bcb-3952-2019:4"
-      ],
-      "description": "Nível 4 da hierarquia normativa: Circular BCB"
-    }
-  ],
-  "tours": [],
   "meta": {}
 }

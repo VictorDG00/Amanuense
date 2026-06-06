@@ -1,9 +1,6 @@
-/* Amanuense — Vade Mecum do Futuro
-   Vanilla JS + D3.js v7 */
-
+/* Amanuense — Vade Mecum do Futuro */
 "use strict";
 
-// ── State ──────────────────────────────────────────────────────────────────────
 const state = {
   graph: null,
   vigency: null,
@@ -11,47 +8,46 @@ const state = {
   diffLog: null,
   simulation: null,
   svg: null,
-  zoomBehavior: null,
   selectedNodeId: null,
-  filters: {
-    nodeType: "all",
-    status: "all",
-    edgeType: "all",
-    implicit: "all",
-    minWeight: 0,
-  },
+  filters: { nodeType: "all", status: "all", edgeType: "all", implicit: "all", minWeight: 0 },
   currentView: "graph",
   tourIndex: 0,
   tourStepIndex: 0,
   highlightedNodes: new Set(),
 };
 
-// ── DOM refs ──────────────────────────────────────────────────────────────────
 const $  = (id) => document.getElementById(id);
 const $q = (sel) => document.querySelector(sel);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  // Load data from global variables injected by graph-data.js / vigency-data.js
-  if (typeof window.GRAPH_DATA === "undefined") {
-    showError("Nenhum grafo encontrado. Execute <code>amanuense run</code> primeiro para gerar os dados.");
+  await loadCorpusList();
+
+  // Reconnect to any pipeline that started before we opened the page
+  const resumed = await resumeRunningPipeline();
+  if (resumed) return;
+
+  try {
+    const resp = await fetch("/api/graph");
+    if (!resp.ok) throw new Error("no graph");
+    state.graph = await resp.json();
+  } catch (_) {
+    hideLoading();
+    switchView("empty");
     return;
   }
 
-  state.graph = window.GRAPH_DATA;
-  state.vigency = typeof window.VIGENCY_DATA !== "undefined" ? window.VIGENCY_DATA : null;
-
-  // Try to load corpus-texts and diff-log via fetch (optional)
   try {
-    const ctResp = await fetch("../output/corpus-texts.json");
-    if (ctResp.ok) state.corpusTexts = await ctResp.json();
+    const ct = await fetch("/output/corpus-texts.json");
+    if (ct.ok) state.corpusTexts = await ct.json();
   } catch (_) {}
   try {
-    const dlResp = await fetch("../output/diff-log.json");
-    if (dlResp.ok) state.diffLog = await dlResp.json();
+    const dl = await fetch("/output/diff-log.json");
+    if (dl.ok) state.diffLog = await dl.json();
   } catch (_) {}
 
   hideLoading();
+  switchView("graph");
   populateSidebar();
   renderGraph();
   populateRoleSelect();
@@ -61,16 +57,227 @@ async function init() {
   bindEvents();
 }
 
-function showError(msg) {
-  $("loading").innerHTML = `
-    <h2>Amanuense</h2>
-    <p style="color:#e74c3c;max-width:400px;text-align:center;">${msg}</p>
-    <p style="margin-top:16px;font-size:13px;opacity:0.5">Ver README para instruções de uso</p>
-  `;
+function hideLoading() { $("loading").classList.add("hidden"); }
+
+// ── Pipeline resume on load ───────────────────────────────────────────────────
+async function resumeRunningPipeline() {
+  try {
+    const resp = await fetch("/api/runs");
+    if (!resp.ok) return false;
+    const { runs } = await resp.json();
+    if (!runs.length) return false;
+
+    const latest = runs[0];
+    if (latest.status === "running") {
+      hideLoading();
+      switchView("pipeline");
+      initAgentSteps();
+      updatePipelineView("Retomando conexão…", 0);
+      connectSSE(latest.id);
+      return true;
+    }
+  } catch (_) {}
+  return false;
 }
 
-function hideLoading() {
-  $("loading").classList.add("hidden");
+// ── Corpus management ─────────────────────────────────────────────────────────
+async function loadCorpusList() {
+  try {
+    const resp = await fetch("/api/corpus");
+    if (!resp.ok) return;
+    const { documents } = await resp.json();
+    renderCorpusList(documents);
+  } catch (_) {}
+}
+
+function renderCorpusList(docs) {
+  const list = $("corpus-list");
+  if (!docs.length) {
+    list.innerHTML = `<div class="corpus-empty">Nenhum documento. Adicione PDFs acima.</div>`;
+    $("run-btn").disabled = true;
+    return;
+  }
+
+  list.innerHTML = docs.map(d => `
+    <div class="corpus-item">
+      <span class="corpus-status ${d.parsed ? 'parsed' : 'pending'}" title="${d.parsed ? 'Parseado ✓' : 'Aguardando parse'}">${d.parsed ? '✓' : '⏳'}</span>
+      <span class="corpus-name" title="${escapeHtml(d.description || d.id)}">${escapeHtml(d.description || d.id)}</span>
+      <button class="corpus-remove" data-id="${escapeHtml(d.id)}" title="Remover documento">✕</button>
+    </div>
+  `).join("");
+
+  list.querySelectorAll(".corpus-remove").forEach(btn => {
+    btn.addEventListener("click", () => removeDocument(btn.dataset.id));
+  });
+
+  $("run-btn").disabled = false;
+}
+
+async function removeDocument(docId) {
+  try {
+    await fetch(`/api/corpus/${encodeURIComponent(docId)}`, { method: "DELETE" });
+    await loadCorpusList();
+  } catch (e) {
+    alert("Erro ao remover: " + e.message);
+  }
+}
+
+async function handleUpload(files) {
+  if (!files.length) return;
+  const formData = new FormData();
+  for (const f of files) formData.append("files", f);
+
+  try {
+    const resp = await fetch("/api/corpus/upload", { method: "POST", body: formData });
+    if (!resp.ok) throw new Error(await resp.text());
+    await loadCorpusList();
+  } catch (e) {
+    alert("Erro no upload: " + e.message);
+  }
+}
+
+// ── Pipeline runner ───────────────────────────────────────────────────────────
+async function startPipeline() {
+  $("run-btn").disabled = true;
+
+  let runId;
+  try {
+    const resp = await fetch("/api/run", { method: "POST" });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || "Erro ao iniciar");
+    }
+    ({ run_id: runId } = await resp.json());
+  } catch (e) {
+    $("run-btn").disabled = false;
+    alert("Erro: " + e.message);
+    return;
+  }
+
+  switchView("pipeline");
+  initAgentSteps();
+  updatePipelineView("Iniciando…", 0);
+  connectSSE(runId);
+}
+
+function connectSSE(runId) {
+  const es = new EventSource(`/api/status/${runId}`);
+  es.onmessage = (e) => handleProgressEvent(JSON.parse(e.data), es);
+  es.onerror = () => {
+    es.close();
+    // SSE dropped — poll runs endpoint to check if it finished while we were disconnected
+    setTimeout(checkIfFinished, 2000);
+  };
+}
+
+async function checkIfFinished() {
+  try {
+    const resp = await fetch("/api/runs");
+    if (!resp.ok) return;
+    const { runs } = await resp.json();
+    const latest = runs[0];
+    if (latest?.status === "done") {
+      updatePipelineView("Concluído!", 100);
+      setTimeout(() => window.location.reload(), 1200);
+    } else if (latest?.status === "error") {
+      switchView("empty");
+      $("run-btn").disabled = false;
+      alert("Erro no pipeline: " + (latest.error_message || "erro desconhecido"));
+    } else if (latest?.status === "running") {
+      // Still running — reconnect SSE
+      setTimeout(() => connectSSE(latest.id), 3000);
+    }
+  } catch (_) {}
+}
+
+const AGENT_LABELS = {
+  "corpus-scanner":      "Inventariando corpus",
+  "norm-analyzer":       "Analisando normas",
+  "hierarchy-analyzer":  "Mapeando hierarquia",
+  "revocation-analyzer": "Detectando revogações",
+  "implication-analyzer":"Detectando implicações",
+  "domain-analyzer":     "Classificando domínios",
+  "graph-builder":       "Construindo grafo",
+  "graph-reviewer":      "Revisando grafo",
+  "tour-builder":        "Gerando tours",
+};
+
+const AGENT_SEQUENCE_ORDER = Object.keys(AGENT_LABELS);
+
+function initAgentSteps() {
+  const ul = $("agent-steps");
+  if (!ul) return;
+  ul.innerHTML = AGENT_SEQUENCE_ORDER.map(agent => `
+    <li class="agent-step" id="step-${agent}">
+      <span class="agent-step-icon">○</span>
+      <span>${AGENT_LABELS[agent]}</span>
+    </li>
+  `).join("");
+}
+
+function markAgentStep(agent, status) {
+  const el = $(`step-${agent}`);
+  if (!el) return;
+  el.className = `agent-step ${status}`;
+  const icon = status === "done" ? "✓" : status === "active" ? "▶" : "○";
+  el.querySelector(".agent-step-icon").textContent = icon;
+}
+
+function handleProgressEvent(event, es) {
+  if (event.type === "agent_start") {
+    const pct = Math.round((event.index / event.total) * 100);
+    const label = `Etapa ${event.index + 1} de ${event.total} — ${AGENT_LABELS[event.agent] || event.agent}`;
+    updatePipelineView(label, pct);
+    markAgentStep(event.agent, "active");
+  }
+  if (event.type === "agent_done") {
+    const pct = Math.round(((event.index + 1) / event.total) * 100);
+    const label = `Etapa ${event.index + 1} de ${event.total} — ${AGENT_LABELS[event.agent] || event.agent}`;
+    updatePipelineView(label, pct);
+    markAgentStep(event.agent, "done");
+  }
+  if (event.type === "done") {
+    es.close();
+    updatePipelineView("Concluído!", 100);
+    // Mark all remaining as done
+    AGENT_SEQUENCE_ORDER.forEach(a => {
+      const el = $(`step-${a}`);
+      if (el && !el.classList.contains("done")) markAgentStep(a, "done");
+    });
+    // Switch spinner to checkmark
+    $("pipeline-spinner").style.display = "none";
+    const wrap = $("pipeline-icon-wrap");
+    wrap.innerHTML = `<div class="pipeline-done-icon">✓</div>`;
+    $("pipeline-heading").textContent = "Pipeline concluído!";
+    $("ver-grafo-btn").classList.remove("hidden");
+    showToast("✓ Grafo gerado com sucesso — clique em Ver Grafo para explorar");
+  }
+  if (event.type === "error" || event.type === "agent_error") {
+    es.close();
+    switchView("empty");
+    $("run-btn").disabled = false;
+    showToast("Erro no pipeline: " + (event.message || "erro desconhecido"), "error");
+  }
+}
+
+function updatePipelineView(label, pct) {
+  $("progress-panel").classList.remove("hidden");
+  $("progress-agent").textContent = label;
+  $("progress-bar").style.width = pct + "%";
+  $("pipeline-status-msg").textContent = label;
+  $("progress-bar-main").style.width = pct + "%";
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = "success") {
+  const toast = $("toast");
+  $("toast-msg").textContent = msg;
+  toast.className = `toast${type === "error" ? " toast-error" : ""}`;
+  if (type !== "error") setTimeout(() => hideToast(), 8000);
+}
+
+function hideToast() {
+  $("toast").classList.add("hidden");
 }
 
 // ── Sidebar Stats ──────────────────────────────────────────────────────────────
@@ -88,7 +295,6 @@ function populateSidebar() {
     <span>Revogados: <b style="color:#e74c3c">${revogadoCount}</b></span>
   `;
 
-  // Populate filter dropdowns
   const nodeTypes = [...new Set(g.nodes.map(n => n.type))].sort();
   const nodeTypeSelect = $("filter-node-type");
   nodeTypes.forEach(t => {
@@ -139,35 +345,24 @@ function renderGraph() {
   const { nodes, links } = getFilteredData();
   if (nodes.length === 0) return;
 
-  const svg = d3.select(canvas)
-    .append("svg")
-    .attr("width", "100%")
-    .attr("height", "100%")
+  const svg = d3.select(canvas).append("svg")
+    .attr("width", "100%").attr("height", "100%")
     .attr("viewBox", `0 0 ${W} ${H}`);
-
   state.svg = svg;
 
-  // Arrow markers per color
   const defs = svg.append("defs");
-  const arrowColors = [...new Set(links.map(e => e.color || "#999"))];
-  arrowColors.forEach(color => {
+  [...new Set(links.map(e => e.color || "#999"))].forEach(color => {
     const safeId = "arrow-" + color.replace("#", "");
     defs.append("marker")
-      .attr("id", safeId)
-      .attr("viewBox", "0 -5 10 10")
+      .attr("id", safeId).attr("viewBox", "0 -5 10 10")
       .attr("refX", 18).attr("refY", 0)
-      .attr("markerWidth", 6).attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", color);
+      .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+      .append("path").attr("d", "M0,-5L10,0L0,5").attr("fill", color);
   });
 
-  const zoom = d3.zoom()
-    .scaleExtent([0.1, 4])
+  const zoom = d3.zoom().scaleExtent([0.1, 4])
     .on("zoom", (event) => g_container.attr("transform", event.transform));
   svg.call(zoom);
-  state.zoomBehavior = zoom;
 
   const g_container = svg.append("g");
 
@@ -178,11 +373,7 @@ function renderGraph() {
     .force("collide", d3.forceCollide(20));
   state.simulation = simulation;
 
-  // Links
-  const link = g_container.append("g")
-    .selectAll("line")
-    .data(links)
-    .join("line")
+  const link = g_container.append("g").selectAll("line").data(links).join("line")
     .attr("stroke", d => d.color || "#999")
     .attr("stroke-width", d => 1 + d.weight * 2)
     .attr("stroke-dasharray", d => d.implicit ? "5,3" : null)
@@ -191,7 +382,6 @@ function renderGraph() {
     .on("mouseenter", (event, d) => showEdgeTooltip(event, d))
     .on("mouseleave", hideTooltip);
 
-  // Nodes
   const nodeRadius = d => {
     if (d.type === "norma") return 16;
     if (d.type === "artigo") return 9;
@@ -199,10 +389,7 @@ function renderGraph() {
     return 6;
   };
 
-  const node = g_container.append("g")
-    .selectAll("g")
-    .data(nodes)
-    .join("g")
+  const node = g_container.append("g").selectAll("g").data(nodes).join("g")
     .attr("class", "node-group")
     .call(d3.drag()
       .on("start", dragStarted)
@@ -227,17 +414,16 @@ function renderGraph() {
     .append("text")
     .attr("dy", d => nodeRadius(d) + 10)
     .attr("text-anchor", "middle")
-    .attr("font-size", "9px")
-    .attr("font-family", "'JetBrains Mono', monospace")
+    .attr("font-size", "11px")
+    .attr("font-family", "'Crimson Pro', serif")
     .attr("fill", "#3d5166")
     .text(d => d.label?.substring(0, 30) || d.id?.split(":")[1] || "");
 
   svg.on("click", () => deselectNode());
 
   simulation.on("tick", () => {
-    link
-      .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-      .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+    link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
     node.attr("transform", d => `translate(${d.x},${d.y})`);
   });
 
@@ -266,54 +452,48 @@ function selectNode(nodeId) {
   $("node-panel-title").textContent = node.label || node.id;
   $("node-panel-type").textContent = node.type.toUpperCase() + " · " + (node.status || "");
   $("node-panel-type").className = "status-" + (node.status || "vigente");
-  $("node-panel-type").style.color = "";
 
   const statusBadge = `<span class="status-badge status-${node.status || 'vigente'}">${node.status || 'vigente'}</span>`;
 
-  let summaryHtml = `<div class="panel-section">
+  let html = `<div class="panel-section">
     <div class="panel-section-label">Resumo</div>
     <div class="panel-text">${escapeHtml(node.summary || "")} ${statusBadge}</div>
   </div>`;
 
-  if (node.tags && node.tags.length) {
-    summaryHtml += `<div class="panel-section">
+  if (node.tags?.length) {
+    html += `<div class="panel-section">
       <div class="panel-section-label">Tags</div>
       <div class="panel-tags">${node.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>
     </div>`;
   }
 
-  // Outgoing edges
   const outEdges = state.graph.links.filter(e => (e.source?.id || e.source) === nodeId);
-  const inEdges = state.graph.links.filter(e => (e.target?.id || e.target) === nodeId);
+  const inEdges  = state.graph.links.filter(e => (e.target?.id || e.target) === nodeId);
 
   if (outEdges.length) {
-    summaryHtml += `<div class="panel-section">
+    html += `<div class="panel-section">
       <div class="panel-section-label">Correlações (saída — ${outEdges.length})</div>
       <ul class="edge-list">${outEdges.slice(0, 10).map(e => edgeHtml(e, "out")).join("")}</ul>
     </div>`;
   }
   if (inEdges.length) {
-    summaryHtml += `<div class="panel-section">
+    html += `<div class="panel-section">
       <div class="panel-section-label">Correlações (entrada — ${inEdges.length})</div>
       <ul class="edge-list">${inEdges.slice(0, 10).map(e => edgeHtml(e, "in")).join("")}</ul>
     </div>`;
   }
 
-  $("node-panel-body").innerHTML = summaryHtml;
+  $("node-panel-body").innerHTML = html;
 
-  // Text section
   const textSection = $("node-text-section");
-  if (state.corpusTexts && state.corpusTexts.texts && state.corpusTexts.texts[nodeId]) {
-    const ct = state.corpusTexts.texts[nodeId];
-    $("node-text-pre").textContent = ct.textoCompleto || "";
+  if (state.corpusTexts?.texts?.[nodeId]) {
+    $("node-text-pre").textContent = state.corpusTexts.texts[nodeId].textoCompleto || "";
     textSection.style.display = "block";
   } else {
     textSection.style.display = "none";
   }
 
   $("node-panel").classList.add("open");
-
-  // Bind click on edge node links
   $("node-panel-body").querySelectorAll(".edge-node-link").forEach(el => {
     el.addEventListener("click", () => selectNode(el.dataset.nodeid));
   });
@@ -323,11 +503,10 @@ function edgeHtml(edge, dir) {
   const otherId = dir === "out" ? (edge.target?.id || edge.target) : (edge.source?.id || edge.source);
   const otherNode = state.graph.nodes.find(n => n.id === otherId);
   const otherLabel = otherNode ? (otherNode.label || otherId).substring(0, 40) : otherId;
-  const edgeColor = edge.color || "#999";
-  const implicitDash = edge.implicit ? " (impl.)" : "";
+  const c = edge.color || "#999";
   return `<li class="edge-item">
-    <span class="edge-type-badge" style="background:${edgeColor}20;color:${edgeColor}">${edge.type}</span>
-    <span class="edge-node-link" data-nodeid="${escapeHtml(otherId)}">${escapeHtml(otherLabel)}</span>${implicitDash}
+    <span class="edge-type-badge" style="background:${c}20;color:${c}">${edge.type}</span>
+    <span class="edge-node-link" data-nodeid="${escapeHtml(otherId)}">${escapeHtml(otherLabel)}</span>${edge.implicit ? " (impl.)" : ""}
   </li>`;
 }
 
@@ -360,11 +539,7 @@ function populateHierarchyView() {
 
   const normaNodes = state.graph.nodes.filter(n => n.type === "norma");
   const byLayer = {};
-  normaNodes.forEach(n => {
-    const layer = n.layer || 9;
-    byLayer[layer] = byLayer[layer] || [];
-    byLayer[layer].push(n);
-  });
+  normaNodes.forEach(n => { const l = n.layer || 9; (byLayer[l] = byLayer[l] || []).push(n); });
 
   const layerNames = {
     1: "Constituição Federal",
@@ -377,17 +552,15 @@ function populateHierarchyView() {
 
   let html = "";
   Object.keys(byLayer).sort().forEach(level => {
-    const name = layerNames[level] || `Nível ${level}`;
     html += `<div class="hierarchy-level">
       <div class="hierarchy-level-title">
-        <span class="hierarchy-level-badge">L${level}</span>${name}
+        <span class="hierarchy-level-badge">L${level}</span>${layerNames[level] || `Nível ${level}`}
       </div>`;
     byLayer[level].forEach(n => {
-      const statusClass = "status-" + (n.status || "vigente");
       html += `<div class="norm-card" onclick="selectNode('${escapeHtml(n.id)}'); switchView('graph');">
         <div class="norm-card-name">${escapeHtml(n.label || n.id)}</div>
         <div class="norm-card-meta">
-          <span class="status-badge ${statusClass}">${n.status || "vigente"}</span>
+          <span class="status-badge status-${n.status || 'vigente'}">${n.status || "vigente"}</span>
           <span style="margin-left:8px">${n.id}</span>
         </div>
       </div>`;
@@ -401,11 +574,9 @@ function populateHierarchyView() {
 function populateRoleSelect() {
   const select = $("role-select");
   if (!state.graph) return;
-  const papeis = state.graph.nodes.filter(n => n.type === "papel" || n.type === "entidade");
-  papeis.forEach(n => {
+  state.graph.nodes.filter(n => n.type === "papel" || n.type === "entidade").forEach(n => {
     const opt = document.createElement("option");
-    opt.value = n.id;
-    opt.textContent = n.label || n.id;
+    opt.value = n.id; opt.textContent = n.label || n.id;
     select.appendChild(opt);
   });
 }
@@ -414,32 +585,24 @@ function renderRoleObligations(papelId) {
   const container = $("role-obligations");
   if (!papelId) { container.innerHTML = ""; return; }
 
-  const obligationTypes = new Set([
-    "obriga", "permite", "proibe", "atribui_responsabilidade", "aplica_a", "condiciona"
-  ]);
-  const edges = state.graph.links.filter(e => {
-    const tgt = e.target?.id || e.target;
-    return tgt === papelId && obligationTypes.has(e.type);
-  });
+  const obligationTypes = new Set(["obriga","permite","proibe","atribui_responsabilidade","aplica_a","condiciona"]);
+  const edges = state.graph.links.filter(e => (e.target?.id || e.target) === papelId && obligationTypes.has(e.type));
+  const papel = state.graph.nodes.find(n => n.id === papelId);
 
   if (!edges.length) {
     container.innerHTML = "<p>Nenhuma obrigação encontrada para este papel.</p>";
     return;
   }
 
-  const papel = state.graph.nodes.find(n => n.id === papelId);
   let html = `<h3 style="font-family:'EB Garamond',serif;font-size:22px;color:#0f2340;margin-bottom:16px">
     Obrigações: ${papel ? (papel.label || papel.id) : papelId}
   </h3>`;
-
   edges.forEach(e => {
     const srcId = e.source?.id || e.source;
     const srcNode = state.graph.nodes.find(n => n.id === srcId);
-    const edgeColor = e.color || "#999";
     html += `<div class="obligation-item">
-      <div class="art-ref" style="color:${edgeColor}">${e.type.toUpperCase()}</div>
-      <div class="art-text">
-        <b>${srcNode ? (srcNode.label || srcId).substring(0, 50) : srcId}</b>
+      <div class="art-ref" style="color:${e.color || '#999'}">${e.type.toUpperCase()}</div>
+      <div class="art-text"><b>${srcNode ? (srcNode.label || srcId).substring(0, 50) : srcId}</b>
         ${srcNode ? `<br><small>${escapeHtml(srcNode.summary || "")}</small>` : ""}
       </div>
     </div>`;
@@ -454,15 +617,12 @@ function populateTimelineView() {
     container.innerHTML = "<p>Nenhum diff-log.json encontrado. Execute o pipeline completo.</p>";
     return;
   }
-
   const entries = state.diffLog.entries || [];
   if (!entries.length) { container.innerHTML = "<p>Sem alterações registradas.</p>"; return; }
 
-  let html = "";
-  entries.slice(0, 100).forEach(e => {
-    const date = (e.timestamp || "").substring(0, 10);
-    html += `<div class="timeline-item">
-      <div class="timeline-date">${date}</div>
+  container.innerHTML = entries.slice(0, 100).map(e => `
+    <div class="timeline-item">
+      <div class="timeline-date">${(e.timestamp || "").substring(0, 10)}</div>
       <div class="timeline-content">
         <div class="timeline-title">${escapeHtml(e.corpusFile || "")}</div>
         <div class="timeline-desc">${escapeHtml(e.description || "")}
@@ -470,29 +630,24 @@ function populateTimelineView() {
           <span class="tag">${e.impacto || ""}</span>
         </div>
       </div>
-    </div>`;
-  });
-  container.innerHTML = html;
+    </div>
+  `).join("");
 }
 
 // ── Tour View ─────────────────────────────────────────────────────────────────
 function populateTourView() {
   const select = $("tour-select");
-  // Tours come from graph's tours field if available via GRAPH_DATA
-  const tourData = window.TOUR_DATA || [];
+  const tourData = (state.graph?.tours) || [];
   if (!tourData.length) {
     $("tour-steps-panel").innerHTML = "<p style='padding:16px;color:#888'>Nenhum tour disponível.</p>";
     return;
   }
-
   tourData.forEach((tour, i) => {
     const opt = document.createElement("option");
     opt.value = i; opt.textContent = tour.title;
     select.appendChild(opt);
   });
-
   renderTour(0);
-
   select.addEventListener("change", () => {
     state.tourIndex = parseInt(select.value);
     state.tourStepIndex = 0;
@@ -501,38 +656,29 @@ function populateTourView() {
 }
 
 function renderTour(tourIdx) {
-  const tours = window.TOUR_DATA || [];
+  const tours = state.graph?.tours || [];
   if (!tours[tourIdx]) return;
-  const tour = tours[tourIdx];
-  const steps = tour.steps || [];
-
-  // Steps panel
-  const panel = $("tour-steps-panel");
-  panel.innerHTML = steps.map((step, i) => `
+  const steps = tours[tourIdx].steps || [];
+  $("tour-steps-panel").innerHTML = steps.map((step, i) => `
     <button class="tour-step-btn ${i === state.tourStepIndex ? 'active' : ''}" onclick="goToTourStep(${tourIdx}, ${i})">
       <div class="tour-step-num">Passo ${step.order || i + 1}</div>
       ${escapeHtml(step.title)}
     </button>
   `).join("");
-
   renderTourStep(tourIdx, state.tourStepIndex);
 }
 
 function renderTourStep(tourIdx, stepIdx) {
   state.tourStepIndex = stepIdx;
-  const tours = window.TOUR_DATA || [];
-  const tour = tours[tourIdx];
+  const tour = (state.graph?.tours || [])[tourIdx];
   if (!tour) return;
-  const steps = tour.steps || [];
-  const step = steps[stepIdx];
+  const step = (tour.steps || [])[stepIdx];
   if (!step) return;
 
-  // Highlight nodes on graph
   state.highlightedNodes = new Set(step.nodeIds || []);
   if (state.currentView === "graph") renderGraph();
 
-  const nodeIds = step.nodeIds || [];
-  const nodeChips = nodeIds.map(id => {
+  const nodeChips = (step.nodeIds || []).map(id => {
     const n = state.graph?.nodes.find(x => x.id === id);
     return `<span class="tour-node-chip" onclick="selectNode('${escapeHtml(id)}'); switchView('graph');">${escapeHtml(n ? (n.label || id).substring(0, 30) : id)}</span>`;
   }).join("");
@@ -543,22 +689,19 @@ function renderTourStep(tourIdx, stepIdx) {
     ${nodeChips ? `<div class="tour-node-chips">${nodeChips}</div>` : ""}
     <div class="tour-nav">
       <button class="tour-nav-btn" onclick="goToTourStep(${tourIdx}, ${stepIdx - 1})" ${stepIdx === 0 ? "disabled" : ""}>← Anterior</button>
-      <button class="tour-nav-btn" onclick="goToTourStep(${tourIdx}, ${stepIdx + 1})" ${stepIdx >= steps.length - 1 ? "disabled" : ""}>Próximo →</button>
+      <button class="tour-nav-btn" onclick="goToTourStep(${tourIdx}, ${stepIdx + 1})" ${stepIdx >= (tour.steps || []).length - 1 ? "disabled" : ""}>Próximo →</button>
     </div>
   `;
 
-  // Update step buttons
   $("tour-steps-panel").querySelectorAll(".tour-step-btn").forEach((btn, i) => {
     btn.classList.toggle("active", i === stepIdx);
   });
 }
 
 function goToTourStep(tourIdx, stepIdx) {
-  const tours = window.TOUR_DATA || [];
-  const tour = tours[tourIdx];
+  const tour = (state.graph?.tours || [])[tourIdx];
   if (!tour) return;
-  const steps = tour.steps || [];
-  if (stepIdx < 0 || stepIdx >= steps.length) return;
+  if (stepIdx < 0 || stepIdx >= (tour.steps || []).length) return;
   renderTourStep(tourIdx, stepIdx);
 }
 
@@ -572,11 +715,7 @@ function setupSearch() {
     if (q.length < 2) { results.style.display = "none"; return; }
 
     const matches = (state.graph?.nodes || [])
-      .filter(n =>
-        n.label?.toLowerCase().includes(q) ||
-        n.summary?.toLowerCase().includes(q) ||
-        n.tags?.some(t => t.toLowerCase().includes(q))
-      )
+      .filter(n => n.label?.toLowerCase().includes(q) || n.summary?.toLowerCase().includes(q) || n.tags?.some(t => t.toLowerCase().includes(q)))
       .slice(0, 12);
 
     if (!matches.length) { results.style.display = "none"; return; }
@@ -586,8 +725,8 @@ function setupSearch() {
         <span class="search-result-type">${n.type}</span>${escapeHtml((n.label || n.id).substring(0, 50))}
       </div>
     `).join("");
-
     results.style.display = "block";
+
     results.querySelectorAll(".search-result-item").forEach(el => {
       el.addEventListener("click", () => {
         selectNode(el.dataset.nodeid);
@@ -608,73 +747,63 @@ function switchView(viewName) {
   state.currentView = viewName;
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".sidebar-btn[data-view]").forEach(b => b.classList.remove("active"));
-
   const viewEl = $(`${viewName}-view`);
   if (viewEl) viewEl.classList.add("active");
-
   const btnEl = $q(`.sidebar-btn[data-view="${viewName}"]`);
   if (btnEl) btnEl.classList.add("active");
-
   if (viewName === "graph" && state.graph) {
-    // Re-render graph if needed (window resize)
     setTimeout(() => { if (!state.simulation) renderGraph(); }, 50);
   }
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
 function bindEvents() {
-  // View buttons
   document.querySelectorAll(".sidebar-btn[data-view]").forEach(btn => {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
 
-  // Filters
-  $("filter-node-type").addEventListener("change", (e) => {
-    state.filters.nodeType = e.target.value;
-    renderGraph();
-  });
-  $("filter-status").addEventListener("change", (e) => {
-    state.filters.status = e.target.value;
-    renderGraph();
-  });
-  $("filter-edge-type").addEventListener("change", (e) => {
-    state.filters.edgeType = e.target.value;
-    renderGraph();
-  });
-  $("filter-implicit").addEventListener("change", (e) => {
-    state.filters.implicit = e.target.value;
-    renderGraph();
-  });
+  $("filter-node-type").addEventListener("change", (e) => { state.filters.nodeType = e.target.value; renderGraph(); });
+  $("filter-status").addEventListener("change", (e) => { state.filters.status = e.target.value; renderGraph(); });
+  $("filter-edge-type").addEventListener("change", (e) => { state.filters.edgeType = e.target.value; renderGraph(); });
+  $("filter-implicit").addEventListener("change", (e) => { state.filters.implicit = e.target.value; renderGraph(); });
   $("filter-weight").addEventListener("input", (e) => {
     state.filters.minWeight = parseFloat(e.target.value);
     $("filter-weight-val").textContent = state.filters.minWeight.toFixed(1);
     renderGraph();
   });
 
-  // Role select
   $("role-select").addEventListener("change", (e) => renderRoleObligations(e.target.value));
-
-  // Node panel close
   $("panel-close-btn").addEventListener("click", deselectNode);
 
-  // Search
   setupSearch();
 
-  // Window resize
-  window.addEventListener("resize", () => {
-    if (state.currentView === "graph") renderGraph();
+  window.addEventListener("resize", () => { if (state.currentView === "graph") renderGraph(); });
+}
+
+function bindCorpusEvents() {
+  $("file-input").addEventListener("change", (e) => handleUpload(Array.from(e.target.files)));
+  $("run-btn").addEventListener("click", startPipeline);
+  $("toast-close").addEventListener("click", hideToast);
+  $("ver-grafo-btn").addEventListener("click", () => window.location.reload());
+
+  const corpusSection = $("corpus-section");
+  corpusSection.addEventListener("dragover", (e) => { e.preventDefault(); corpusSection.classList.add("drag-over"); });
+  corpusSection.addEventListener("dragleave", () => corpusSection.classList.remove("drag-over"));
+  corpusSection.addEventListener("drop", (e) => {
+    e.preventDefault();
+    corpusSection.classList.remove("drag-over");
+    handleUpload(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith(".pdf")));
   });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function escapeHtml(text) {
   if (!text) return "";
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  bindCorpusEvents();
+  init();
+});
