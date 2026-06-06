@@ -23,6 +23,10 @@ const $q = (sel) => document.querySelector(sel);
 async function init() {
   await loadCorpusList();
 
+  // Reconnect to any pipeline that started before we opened the page
+  const resumed = await resumeRunningPipeline();
+  if (resumed) return;
+
   try {
     const resp = await fetch("/api/graph");
     if (!resp.ok) throw new Error("no graph");
@@ -54,6 +58,26 @@ async function init() {
 }
 
 function hideLoading() { $("loading").classList.add("hidden"); }
+
+// ── Pipeline resume on load ───────────────────────────────────────────────────
+async function resumeRunningPipeline() {
+  try {
+    const resp = await fetch("/api/runs");
+    if (!resp.ok) return false;
+    const { runs } = await resp.json();
+    if (!runs.length) return false;
+
+    const latest = runs[0];
+    if (latest.status === "running") {
+      hideLoading();
+      switchView("pipeline");
+      updatePipelineView("Retomando conexão…", 0);
+      connectSSE(latest.id);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
 
 // ── Corpus management ─────────────────────────────────────────────────────────
 async function loadCorpusList() {
@@ -114,7 +138,6 @@ async function handleUpload(files) {
 // ── Pipeline runner ───────────────────────────────────────────────────────────
 async function startPipeline() {
   $("run-btn").disabled = true;
-  showProgress("Iniciando…", 0);
 
   let runId;
   try {
@@ -125,66 +148,88 @@ async function startPipeline() {
     }
     ({ run_id: runId } = await resp.json());
   } catch (e) {
-    hideProgress();
     $("run-btn").disabled = false;
     alert("Erro: " + e.message);
     return;
   }
 
+  switchView("pipeline");
+  updatePipelineView("Iniciando…", 0);
+  connectSSE(runId);
+}
+
+function connectSSE(runId) {
   const es = new EventSource(`/api/status/${runId}`);
-  es.onmessage = (e) => {
-    const event = JSON.parse(e.data);
-    handleProgressEvent(event, es);
-  };
+  es.onmessage = (e) => handleProgressEvent(JSON.parse(e.data), es);
   es.onerror = () => {
     es.close();
-    hideProgress();
-    $("run-btn").disabled = false;
+    // SSE dropped — poll runs endpoint to check if it finished while we were disconnected
+    setTimeout(checkIfFinished, 2000);
   };
 }
 
-function handleProgressEvent(event, es) {
-  const AGENT_LABELS = {
-    "corpus-scanner":      "Inventariando corpus…",
-    "norm-analyzer":       "Analisando normas…",
-    "hierarchy-analyzer":  "Mapeando hierarquia…",
-    "revocation-analyzer": "Detectando revogações…",
-    "implication-analyzer":"Detectando implicações…",
-    "domain-analyzer":     "Classificando domínios…",
-    "graph-builder":       "Construindo grafo…",
-    "graph-reviewer":      "Revisando grafo…",
-    "tour-builder":        "Gerando tours…",
-  };
+async function checkIfFinished() {
+  try {
+    const resp = await fetch("/api/runs");
+    if (!resp.ok) return;
+    const { runs } = await resp.json();
+    const latest = runs[0];
+    if (latest?.status === "done") {
+      updatePipelineView("Concluído!", 100);
+      setTimeout(() => window.location.reload(), 1200);
+    } else if (latest?.status === "error") {
+      switchView("empty");
+      $("run-btn").disabled = false;
+      alert("Erro no pipeline: " + (latest.error_message || "erro desconhecido"));
+    } else if (latest?.status === "running") {
+      // Still running — reconnect SSE
+      setTimeout(() => connectSSE(latest.id), 3000);
+    }
+  } catch (_) {}
+}
 
+const AGENT_LABELS = {
+  "corpus-scanner":      "Inventariando corpus…",
+  "norm-analyzer":       "Analisando normas…",
+  "hierarchy-analyzer":  "Mapeando hierarquia…",
+  "revocation-analyzer": "Detectando revogações…",
+  "implication-analyzer":"Detectando implicações…",
+  "domain-analyzer":     "Classificando domínios…",
+  "graph-builder":       "Construindo grafo…",
+  "graph-reviewer":      "Revisando grafo…",
+  "tour-builder":        "Gerando tours…",
+};
+
+function handleProgressEvent(event, es) {
   if (event.type === "agent_start") {
     const pct = Math.round((event.index / event.total) * 100);
-    showProgress(AGENT_LABELS[event.agent] || event.agent, pct);
+    updatePipelineView(AGENT_LABELS[event.agent] || event.agent, pct);
   }
   if (event.type === "agent_done") {
     const pct = Math.round(((event.index + 1) / event.total) * 100);
-    showProgress(AGENT_LABELS[event.agent] || event.agent, pct);
+    updatePipelineView(AGENT_LABELS[event.agent] || event.agent, pct);
   }
   if (event.type === "done") {
     es.close();
-    showProgress("Concluído!", 100);
+    updatePipelineView("Concluído!", 100);
     setTimeout(() => window.location.reload(), 1200);
   }
   if (event.type === "error" || event.type === "agent_error") {
     es.close();
-    hideProgress();
+    switchView("empty");
     $("run-btn").disabled = false;
     alert("Erro no pipeline: " + (event.message || "erro desconhecido"));
   }
 }
 
-function showProgress(label, pct) {
+function updatePipelineView(label, pct) {
+  // Sidebar mini-bar
   $("progress-panel").classList.remove("hidden");
   $("progress-agent").textContent = label;
   $("progress-bar").style.width = pct + "%";
-}
-
-function hideProgress() {
-  $("progress-panel").classList.add("hidden");
+  // Main area
+  $("pipeline-status-msg").textContent = label;
+  $("progress-bar-main").style.width = pct + "%";
 }
 
 // ── Sidebar Stats ──────────────────────────────────────────────────────────────

@@ -1,1 +1,434 @@
-{"nodes":[],"links":[],"layers":[],"tours":[],"corpus":"","generatedAt":null}
+{
+  "version": "1.0",
+  "generatedAt": "2026-06-06T02:41:10.976508",
+  "corpus": "pix-bcb",
+  "nodes": [
+    {
+      "id": "papel:psp-direto",
+      "type": "papel",
+      "name": "PSP Direto",
+      "summary": "Papel regulatório: PSP Direto",
+      "tags": [
+        "psp-direto"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:psp-indireto",
+      "type": "papel",
+      "name": "PSP Indireto",
+      "summary": "Papel regulatório: PSP Indireto",
+      "tags": [
+        "psp-indireto"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:itp",
+      "type": "papel",
+      "name": "ITP",
+      "summary": "Papel regulatório: ITP",
+      "tags": [
+        "itp"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:iniciador-de-transacao-de-pagamento",
+      "type": "papel",
+      "name": "Iniciador de Transação de Pagamento",
+      "summary": "Papel regulatório: Iniciador de Transação de Pagamento",
+      "tags": [
+        "iniciador-de-transação-de-pagamento"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:usuario-final-pagador",
+      "type": "papel",
+      "name": "Usuário Final Pagador",
+      "summary": "Papel regulatório: Usuário Final Pagador",
+      "tags": [
+        "usuário-final-pagador"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:usuario-final-recebedor",
+      "type": "papel",
+      "name": "Usuário Final Recebedor",
+      "summary": "Papel regulatório: Usuário Final Recebedor",
+      "tags": [
+        "usuário-final-recebedor"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:gestor-do-arranjo",
+      "type": "papel",
+      "name": "Gestor do Arranjo",
+      "summary": "Papel regulatório: Gestor do Arranjo",
+      "tags": [
+        "gestor-do-arranjo"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:bcb",
+      "type": "papel",
+      "name": "BCB",
+      "summary": "Papel regulatório: BCB",
+      "tags": [
+        "bcb"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "papel:banco-central-do-brasil",
+      "type": "papel",
+      "name": "Banco Central do Brasil",
+      "summary": "Papel regulatório: Banco Central do Brasil",
+      "tags": [
+        "banco-central-do-brasil"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:bcb",
+      "type": "entidade",
+      "name": "BCB",
+      "summary": "Entidade regulatória ou de mercado: BCB",
+      "tags": [
+        "bcb"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:cmn",
+      "type": "entidade",
+      "name": "CMN",
+      "summary": "Entidade regulatória ou de mercado: CMN",
+      "tags": [
+        "cmn"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:cip",
+      "type": "entidade",
+      "name": "CIP",
+      "summary": "Entidade regulatória ou de mercado: CIP",
+      "tags": [
+        "cip"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:febraban",
+      "type": "entidade",
+      "name": "FEBRABAN",
+      "summary": "Entidade regulatória ou de mercado: FEBRABAN",
+      "tags": [
+        "febraban"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:str",
+      "type": "entidade",
+      "name": "STR",
+      "summary": "Entidade regulatória ou de mercado: STR",
+      "tags": [
+        "str"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:dict",
+      "type": "entidade",
+      "name": "DICT",
+      "summary": "Entidade regulatória ou de mercado: DICT",
+      "tags": [
+        "dict"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    },
+    {
+      "id": "ent:sfn",
+      "type": "entidade",
+      "name": "SFN",
+      "summary": "Entidade regulatória ou de mercado: SFN",
+      "tags": [
+        "sfn"
+      ],
+      "normativeLayer": null,
+      "sourceDocument": null,
+      "articleNumber": null,
+      "vigenciaMeta": null,
+      "normaMeta": null,
+      "review_required": false,
+      "review_notes": null
+    }
+  ],
+  "edges": [],
+  "layers": [],
+  "tours": [
+    {
+      "id": "tour-fundamentos-pix",
+      "title": "Fundamentos do Pix: Atores e Instituições",
+      "description": "Roteiro introdutório para compreender quem são os principais participantes e entidades que regem o ecossistema Pix.",
+      "profileTarget": [
+        "advogado",
+        "gestor"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "O Banco Central e o CMN",
+          "description": "Entidades reguladoras centrais do sistema financeiro. O BCB é o gestor do arranjo Pix, enquanto o CMN estabelece diretrizes gerais. Compreender seus papéis é fundamental para entender a hierarquia normativa do Pix.",
+          "nodeIds": [
+            "papel:bcb",
+            "papel:banco-central-do-brasil",
+            "ent:cmn"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Participantes Diretos e Indiretos",
+          "description": "Os PSPs Diretos são os participantes que se conectam diretamente ao Bacen, enquanto os PSPs Indiretos dependem de um participante direto. Essa distinção impacta obrigações regulatórias e de liquidação.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Iniciadores e ITPs",
+          "description": "O Iniciador de Transação de Pagamento e o ITP (Instrumento de Pagamento) são papéis que ampliam as possibilidades de uso do Pix. Um oferece a iniciação sem redirecionamento, o outro, um instrumento de pagamento específico.",
+          "nodeIds": [
+            "papel:iniciador-de-transacao-de-pagamento",
+            "papel:itp"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Usuários Finais: Pagador e Recebedor",
+          "description": "Os usuários finais são o coração do Pix. O pagador inicia a transação e o recebedor a conclui. Conhecer seus direitos e deveres é essencial para compliance e atendimento.",
+          "nodeIds": [
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Infraestruturas de Apoio",
+          "description": "O DICT (Diretório de Identificadores de Contas Transacionais) gerencia as chaves Pix, e o STR (Sistema de Transferência de Reservas) processa a liquidação. A CIP e a FEBRABAN também atuam como entidades de suporte e padronização.",
+          "nodeIds": [
+            "ent:dict",
+            "ent:str",
+            "ent:cip",
+            "ent:febraban"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-compliance-responsabilidades",
+      "title": "Compliance e Responsabilidades no Pix",
+      "description": "Roteiro focado em obrigações regulatórias, prevenção a fraudes e gestão de riscos para profissionais de compliance.",
+      "profileTarget": [
+        "compliance",
+        "advogado"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "Papéis sob a Lupa do Compliance",
+          "description": "Cada participante (PSP Direto, PSP Indireto, ITP e Iniciador) possui responsabilidades específicas perante o BCB e os usuários. É crucial mapear esses papéis para desenhar controles internos adequados.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto",
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Gestão do Arranjo e Supervisão do BCB",
+          "description": "O BCB, como gestor do arranjo e supervisor, define regras de funcionamento, segurança e combate a ilícitos. Compliance deve monitorar as atualizações normativas emitidas pelo BCB e pelo CMN.",
+          "nodeIds": [
+            "papel:gestor-do-arranjo",
+            "papel:bcb",
+            "ent:cmn"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Direitos dos Usuários Finais",
+          "description": "Os usuários pagador e recebedor têm direitos como portabilidade de chaves, devolução em caso de fraude (Mecanismo Especial de Devolução - MED) e informações claras. Compliance deve assegurar que esses direitos sejam respeitados.",
+          "nodeIds": [
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Infraestrutura Crítica e Segurança",
+          "description": "O DICT e o STR são infraestruturas críticas. A integridade dos dados cadastrais e a segurança das liquidações são pontos de atenção para compliance, exigindo planos de continuidade de negócios.",
+          "nodeIds": [
+            "ent:dict",
+            "ent:str"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-visao-gestor",
+      "title": "Visão do Gestor: Hierarquia e Ecossistema Pix",
+      "description": "Roteiro estratégico para gestores que precisam de uma visão geral dos participantes, entidades e da estrutura hierárquica do Pix.",
+      "profileTarget": [
+        "gestor"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "O Sistema Financeiro Nacional e o Pix",
+          "description": "O Pix está inserido no SFN. O CMN define as políticas e o BCB as executa, sendo o gestor do arranjo. Esta hierarquia determina a origem de todas as normas aplicáveis.",
+          "nodeIds": [
+            "ent:sfn",
+            "ent:cmn",
+            "papel:bcb"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Os Pilares Operacionais: DICT, STR, CIP",
+          "description": "O DICT gerencia chaves, o STR liquida transações e a CIP atua como câmara de compensação. Conhecer essas entidades é vital para entender o fluxo de ponta a ponta de uma transação Pix.",
+          "nodeIds": [
+            "ent:dict",
+            "ent:str",
+            "ent:cip"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Modelo de Participação",
+          "description": "A diferenciação entre PSP Direto e PSP Indireto impacta custos, responsabilidades e a alçada de atuação. Gestores precisam decidir o modelo mais adequado para sua instituição.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Novos Atores e o Futuro",
+          "description": "ITPs e Iniciadores de Pagamento representam a evolução do arranjo. Gestores devem avaliar oportunidades de negócio e riscos associados a esses novos papéis.",
+          "nodeIds": [
+            "papel:itp",
+            "papel:iniciador-de-transacao-de-pagamento"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "O Ecossistema Completo",
+          "description": "A FEBRABAN e o CMN completam o cenário, representando o setor bancário e a regulação macro. Entender este ecossistema auxilia na tomada de decisões estratégicas.",
+          "nodeIds": [
+            "ent:febraban",
+            "ent:cmn"
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": {}
+}
