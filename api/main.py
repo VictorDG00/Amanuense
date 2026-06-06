@@ -136,11 +136,53 @@ def get_graph():
     data = json.loads(graph_path.read_text(encoding="utf-8"))
     if not data.get("nodes"):
         raise HTTPException(404, "Grafo vazio — execute o pipeline primeiro")
-    # Converte para formato D3 (nodes + links) que o frontend espera
-    from pipeline.schemas import KnowledgeGraph
-    from pipeline.graph.exporter import to_d3_json
-    graph = KnowledgeGraph.model_validate(data)
-    return JSONResponse(to_d3_json(graph))
+    return JSONResponse(_to_d3(data))
+
+
+def _to_d3(data: dict) -> dict:
+    """Converte knowledge-graph.json bruto para formato D3 (nodes + links)."""
+    from pipeline.graph.exporter import _NODE_COLORS, _EDGE_COLORS
+
+    nodes = []
+    for n in data.get("nodes", []):
+        vigencia = n.get("vigenciaMeta") or {}
+        status = vigencia.get("status", "vigente")
+        # Normaliza enum serializado como "vigente" ou "VigencyStatus.vigente"
+        if "." in str(status):
+            status = str(status).split(".")[-1]
+        node_type = n.get("type", "norma")
+        nodes.append({
+            "id": n["id"],
+            "label": (n.get("name") or n["id"])[:60],
+            "type": node_type,
+            "status": status,
+            "layer": n.get("layer", 0),
+            "color": _NODE_COLORS.get(node_type, "#888888"),
+            "summary": (n.get("summary") or "")[:200],
+            "tags": n.get("tags") or [],
+            "review": n.get("review_required", False),
+        })
+
+    links = []
+    for e in data.get("edges", []):
+        if e.get("deprecated"):
+            continue
+        edge_type = e.get("type", "")
+        if "." in str(edge_type):
+            edge_type = str(edge_type).split(".")[-1]
+        links.append({
+            "id": e.get("id", ""),
+            "source": e["source"],
+            "target": e["target"],
+            "type": edge_type,
+            "weight": e.get("weight", 0.5),
+            "implicit": e.get("implicit", False),
+            "color": _EDGE_COLORS.get(edge_type, "#999999"),
+            "review": e.get("review_required", False),
+            "stale": e.get("stale", False),
+        })
+
+    return {"nodes": nodes, "links": links}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
