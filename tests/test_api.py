@@ -191,3 +191,145 @@ def test_runs_empty(client):
     resp = client.get("/api/runs")
     assert resp.status_code == 200
     assert resp.json()["runs"] == []
+
+
+def test_run_creates_pipeline_run_record(client, monkeypatch):
+    client.post("/api/corpus/upload",
+        files=[("files", ("resolucao-bcb-001-2020.pdf", io.BytesIO(b"%PDF"), "application/pdf"))])
+
+    import api.main as main_mod
+    monkeypatch.setattr(main_mod, "start_run", lambda run_id: None)
+
+    client.post("/api/run")
+
+    runs = client.get("/api/runs").json()["runs"]
+    assert len(runs) == 1
+    assert runs[0]["status"] == "running"
+    assert runs[0]["id"] is not None
+
+
+def test_run_creates_registry_json(client, tmp_path, monkeypatch):
+    """POST /api/run deve exportar registry.json antes de iniciar o pipeline."""
+    client.post("/api/corpus/upload",
+        files=[("files", ("circular-bcb-3952-2019.pdf", io.BytesIO(b"%PDF"), "application/pdf"))])
+
+    import api.main as main_mod
+    monkeypatch.setattr(main_mod, "start_run", lambda run_id: None)
+
+    client.post("/api/run")
+
+    registry_path = tmp_path / "corpus" / "registry.json"
+    assert registry_path.exists()
+    registry = json.loads(registry_path.read_text())
+    assert "circular-bcb-3952-2019" in registry
+
+
+# ── _to_d3 unit tests ─────────────────────────────────────────────────────────
+
+def test_to_d3_basic_conversion():
+    from api.main import _to_d3
+    data = {
+        "nodes": [{
+            "id": "norma:res-001",
+            "type": "norma",
+            "name": "Resolução 001",
+            "summary": "Resumo",
+            "tags": ["pix"],
+            "normativeLayer": "resolucao",
+            "review_required": False,
+            "vigenciaMeta": {"status": "vigente"},
+        }],
+        "edges": [{
+            "id": "e1",
+            "source": "norma:res-001",
+            "target": "norma:res-002",
+            "type": "regulamenta",
+            "weight": 0.8,
+            "implicit": False,
+            "deprecated": False,
+        }],
+    }
+    result = _to_d3(data)
+
+    assert "nodes" in result and "links" in result
+    assert result["nodes"][0]["id"] == "norma:res-001"
+    assert result["nodes"][0]["label"] == "Resolução 001"
+    assert result["nodes"][0]["status"] == "vigente"
+    assert result["links"][0]["source"] == "norma:res-001"
+    assert result["links"][0]["type"] == "regulamenta"
+
+
+def test_to_d3_normalizes_enum_status():
+    from api.main import _to_d3
+    data = {
+        "nodes": [{
+            "id": "n1", "type": "norma", "name": "N",
+            "summary": "", "tags": [],
+            "vigenciaMeta": {"status": "VigencyStatus.revogado"},
+        }],
+        "edges": [],
+    }
+    result = _to_d3(data)
+    assert result["nodes"][0]["status"] == "revogado"
+
+
+def test_to_d3_normalizes_enum_edge_type():
+    from api.main import _to_d3
+    data = {
+        "nodes": [],
+        "edges": [{
+            "id": "e1", "source": "a", "target": "b",
+            "type": "EdgeType.revoga_expressamente",
+            "weight": 1.0, "implicit": False,
+        }],
+    }
+    result = _to_d3(data)
+    assert result["links"][0]["type"] == "revoga_expressamente"
+
+
+def test_to_d3_filters_deprecated_edges():
+    from api.main import _to_d3
+    data = {
+        "nodes": [],
+        "edges": [
+            {"id": "e1", "source": "a", "target": "b", "type": "altera", "weight": 1.0, "implicit": False, "deprecated": True},
+            {"id": "e2", "source": "c", "target": "d", "type": "altera", "weight": 1.0, "implicit": False, "deprecated": False},
+        ],
+    }
+    result = _to_d3(data)
+    assert len(result["links"]) == 1
+    assert result["links"][0]["id"] == "e2"
+
+
+def test_to_d3_truncates_long_labels():
+    from api.main import _to_d3
+    long_name = "A" * 100
+    data = {
+        "nodes": [{"id": "n1", "type": "artigo", "name": long_name, "summary": "", "tags": [], "vigenciaMeta": {"status": "vigente"}}],
+        "edges": [],
+    }
+    result = _to_d3(data)
+    assert len(result["nodes"][0]["label"]) <= 60
+
+
+# ── db/models.to_registry_dict ────────────────────────────────────────────────
+
+def test_corpus_document_to_registry_dict():
+    from db.models import CorpusDocument
+    doc = CorpusDocument(
+        id="resolucao-bcb-001-2020",
+        authority="BCB",
+        type="resolucao",
+        number="1",
+        year=2020,
+        data_publicacao="2020-11-12",
+        data_vigor="2020-11-16",
+        vigency_status="vigente",
+        description="Regulamento Pix",
+    )
+    d = doc.to_registry_dict()
+    assert d["authority"] == "BCB"
+    assert d["dataPublicacao"] == "2020-11-12"
+    assert d["dataVigor"] == "2020-11-16"
+    assert d["vigencyStatus"] == "vigente"
+    assert "id" not in d  # id não vai para o registry
