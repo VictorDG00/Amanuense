@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generatedAt": "2026-06-06T02:41:10.976508",
+  "generatedAt": "2026-06-06T02:47:01.992619",
   "corpus": "pix-bcb",
   "nodes": [
     {
@@ -265,27 +265,28 @@
   "tours": [
     {
       "id": "tour-fundamentos-pix",
-      "title": "Fundamentos do Pix: Atores e Instituições",
-      "description": "Roteiro introdutório para compreender quem são os principais participantes e entidades que regem o ecossistema Pix.",
+      "title": "Fundamentos do Pix",
+      "description": "Roteiro introdutório: o que é o Pix, quem são os participantes e quais as bases regulatórias.",
       "profileTarget": [
         "advogado",
+        "compliance",
         "gestor"
       ],
       "steps": [
         {
           "order": 1,
-          "title": "O Banco Central e o CMN",
-          "description": "Entidades reguladoras centrais do sistema financeiro. O BCB é o gestor do arranjo Pix, enquanto o CMN estabelece diretrizes gerais. Compreender seus papéis é fundamental para entender a hierarquia normativa do Pix.",
+          "title": "O Gestor e o Regulador",
+          "description": "O Banco Central do Brasil (BCB) atua como gestor do arranjo Pix e como seu regulador principal. Compreender seu papel é o primeiro passo para entender a hierarquia normativa e as competências envolvidas.",
           "nodeIds": [
             "papel:bcb",
             "papel:banco-central-do-brasil",
-            "ent:cmn"
+            "ent:bcb"
           ]
         },
         {
           "order": 2,
-          "title": "Participantes Diretos e Indiretos",
-          "description": "Os PSPs Diretos são os participantes que se conectam diretamente ao Bacen, enquanto os PSPs Indiretos dependem de um participante direto. Essa distinção impacta obrigações regulatórias e de liquidação.",
+          "title": "Os Participantes Diretos e Indiretos",
+          "description": "Os PSPs Diretos são os participantes que se conectam diretamente ao DICT e liquidam operações, enquanto os PSPs Indiretos atuam por meio deles. Essa distinção define obrigações regulatórias de conexão, segurança e reporte.",
           "nodeIds": [
             "papel:psp-direto",
             "papel:psp-indireto"
@@ -293,8 +294,65 @@
         },
         {
           "order": 3,
-          "title": "Iniciadores e ITPs",
-          "description": "O Iniciador de Transação de Pagamento e o ITP (Instrumento de Pagamento) são papéis que ampliam as possibilidades de uso do Pix. Um oferece a iniciação sem redirecionamento, o outro, um instrumento de pagamento específico.",
+          "title": "Iniciadores e Usuários Finais",
+          "description": "Os Iniciadores de Transação de Pagamento (ITPs) e os usuários finais (pagador e recebedor) são figuras essenciais no fluxo do Pix. Os ITPs acrescentam uma camada de iniciação sem movimentar recursos, regulada para proteção do usuário.",
+          "nodeIds": [
+            "papel:iniciador-de-transacao-de-pagamento",
+            "papel:itp",
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "A Infraestrutura do Ecossistema",
+          "description": "O DICT (Diretório de Identificadores) é o sistema central de chaves, e o STR (Sistema de Transferência de Reservas) é o liquidante. CIP e FEBRABAN atuam como autorreguladores e operadores de câmaras, enquanto o SFN estabelece o ambiente sistêmico.",
+          "nodeIds": [
+            "ent:dict",
+            "ent:str",
+            "ent:cip",
+            "ent:febraban",
+            "ent:sfn"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "O Papel do CMN",
+          "description": "O Conselho Monetário Nacional (CMN) edita normas macroprudenciais que balizam o arranjo Pix, especialmente em temas de moeda, crédito e política cambial. Suas resoluções estão no topo da pirâmide normativa.",
+          "nodeIds": [
+            "ent:cmn"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-compliance-regulatorio",
+      "title": "Compliance Regulatório no Pix",
+      "description": "Roteiro para profissionais de compliance: obrigações de participantes, prazos e reporting ao BCB.",
+      "profileTarget": [
+        "compliance"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "Participantes Diretos: Obrigações Centrais",
+          "description": "Os PSPs Diretos têm obrigações de conexão ao DICT, liquidação via STR e reporte de transações ao BCB. Para compliance, é vital monitorar a adesão aos manuais e prazos operacionais.",
+          "nodeIds": [
+            "papel:psp-direto"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "PSPs Indiretos: Vínculo e Responsabilidade",
+          "description": "PSPs Indiretos dependem de contratos com PSPs Diretos. O compliance deve verificar a regularidade desses contratos e assegurar que o PSP Direto reporta adequadamente as transações indiretas.",
+          "nodeIds": [
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Iniciadores: Licenciamento e Segurança",
+          "description": "ITPs e Iniciadores de Pagamento precisam de autorização do BCB e devem cumprir requisitos de segurança da informação. O compliance deve auditar a implementação de controles de iniciação e consentimento.",
           "nodeIds": [
             "papel:iniciador-de-transacao-de-pagamento",
             "papel:itp"
@@ -302,20 +360,81 @@
         },
         {
           "order": 4,
-          "title": "Usuários Finais: Pagador e Recebedor",
-          "description": "Os usuários finais são o coração do Pix. O pagador inicia a transação e o recebedor a conclui. Conhecer seus direitos e deveres é essencial para compliance e atendimento.",
+          "title": "Entidades de Infraestrutura e Autorregulação",
+          "description": "CIP, FEBRABAN e SFN estabelecem regras operacionais e padrões de segurança. O compliance deve acompanhar as atualizações normativas dessas entidades e garantir sua implementação interna.",
           "nodeIds": [
-            "papel:usuario-final-pagador",
-            "papel:usuario-final-recebedor"
+            "ent:cip",
+            "ent:febraban",
+            "ent:sfn"
           ]
         },
         {
           "order": 5,
-          "title": "Infraestruturas de Apoio",
-          "description": "O DICT (Diretório de Identificadores de Contas Transacionais) gerencia as chaves Pix, e o STR (Sistema de Transferência de Reservas) processa a liquidação. A CIP e a FEBRABAN também atuam como entidades de suporte e padronização.",
+          "title": "Gestor e Regulador: Reporte e Sanções",
+          "description": "O BCB, como gestor e regulador, exige reportes periódicos (ex.: relatórios de falhas). O compliance deve manter evidências de conformidade para responder a fiscalizações e evitar sanções.",
           "nodeIds": [
-            "ent:dict",
-            "ent:str",
+            "papel:bcb",
+            "papel:banco-central-do-brasil",
+            "ent:bcb"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tour-requisitos-tecnicos-operacionais",
+      "title": "Requisitos Técnicos e Operacionais do Pix",
+      "description": "Roteiro para técnicos e engenheiros de sistemas: infraestrutura, conexão e segurança.",
+      "profileTarget": [
+        "tecnico"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "title": "DICT e a Base de Chaves",
+          "description": "O DICT é o diretório central onde as chaves Pix são registradas. A integração com ele requer APIs específicas e tratamento de payloads; qualquer falha impacta a experiência do usuário.",
+          "nodeIds": [
+            "ent:dict"
+          ]
+        },
+        {
+          "order": 2,
+          "title": "Liquidação via STR e Conexão Direta",
+          "description": "A liquidação das transações Pix ocorre no STR. PSPs Diretos precisam de conectividade adequada e tratamento de mensagens no padrão ISO 20022; erros podem causar atrasos ou rejeições.",
+          "nodeIds": [
+            "ent:str"
+          ]
+        },
+        {
+          "order": 3,
+          "title": "Segurança: Iniciadores e Autenticação",
+          "description": "ITPs e Iniciadores de Pagamento demandam mecanismos robustos de autenticação e consentimento. A implementação de OAuth2, mTLS e validações de replay é mandatória.",
+          "nodeIds": [
+            "papel:iniciador-de-transacao-de-pagamento",
+            "papel:itp"
+          ]
+        },
+        {
+          "order": 4,
+          "title": "Interoperabilidade com PSPs Indiretos",
+          "description": "PSPs Indiretos dependem de APIs expostas pelos Diretos. O time técnico deve garantir a compatibilidade de formatos, protocolos e a continuidade operacional mesmo em cenários de pico.",
+          "nodeIds": [
+            "papel:psp-direto",
+            "papel:psp-indireto"
+          ]
+        },
+        {
+          "order": 5,
+          "title": "Infraestrutura do SFN e Normas de Resiliência",
+          "description": "O SFN determina requisitos de disponibilidade e redundância. O sistema deve operar 24/7, com planos de continuidade e testes regulares de failover.",
+          "nodeIds": [
+            "ent:sfn"
+          ]
+        },
+        {
+          "order": 6,
+          "title": "Autorregulação e Padrões (CIP/FEBRABAN)",
+          "description": "CIP e FEBRABAN publicam padrões técnicos (ex.: formatos de mensageria). Manter-se atualizado com essas especificações é essencial para garantir interoperabilidade e conformidade.",
+          "nodeIds": [
             "ent:cip",
             "ent:febraban"
           ]
@@ -323,108 +442,61 @@
       ]
     },
     {
-      "id": "tour-compliance-responsabilidades",
-      "title": "Compliance e Responsabilidades no Pix",
-      "description": "Roteiro focado em obrigações regulatórias, prevenção a fraudes e gestão de riscos para profissionais de compliance.",
-      "profileTarget": [
-        "compliance",
-        "advogado"
-      ],
-      "steps": [
-        {
-          "order": 1,
-          "title": "Papéis sob a Lupa do Compliance",
-          "description": "Cada participante (PSP Direto, PSP Indireto, ITP e Iniciador) possui responsabilidades específicas perante o BCB e os usuários. É crucial mapear esses papéis para desenhar controles internos adequados.",
-          "nodeIds": [
-            "papel:psp-direto",
-            "papel:psp-indireto",
-            "papel:itp",
-            "papel:iniciador-de-transacao-de-pagamento"
-          ]
-        },
-        {
-          "order": 2,
-          "title": "Gestão do Arranjo e Supervisão do BCB",
-          "description": "O BCB, como gestor do arranjo e supervisor, define regras de funcionamento, segurança e combate a ilícitos. Compliance deve monitorar as atualizações normativas emitidas pelo BCB e pelo CMN.",
-          "nodeIds": [
-            "papel:gestor-do-arranjo",
-            "papel:bcb",
-            "ent:cmn"
-          ]
-        },
-        {
-          "order": 3,
-          "title": "Direitos dos Usuários Finais",
-          "description": "Os usuários pagador e recebedor têm direitos como portabilidade de chaves, devolução em caso de fraude (Mecanismo Especial de Devolução - MED) e informações claras. Compliance deve assegurar que esses direitos sejam respeitados.",
-          "nodeIds": [
-            "papel:usuario-final-pagador",
-            "papel:usuario-final-recebedor"
-          ]
-        },
-        {
-          "order": 4,
-          "title": "Infraestrutura Crítica e Segurança",
-          "description": "O DICT e o STR são infraestruturas críticas. A integridade dos dados cadastrais e a segurança das liquidações são pontos de atenção para compliance, exigindo planos de continuidade de negócios.",
-          "nodeIds": [
-            "ent:dict",
-            "ent:str"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "tour-visao-gestor",
-      "title": "Visão do Gestor: Hierarquia e Ecossistema Pix",
-      "description": "Roteiro estratégico para gestores que precisam de uma visão geral dos participantes, entidades e da estrutura hierárquica do Pix.",
+      "id": "tour-visao-geral-gestao",
+      "title": "Visão Geral para Gestores",
+      "description": "Roteiro estratégico para gestores: hierarquia normativa, papéis e governança do Pix.",
       "profileTarget": [
         "gestor"
       ],
       "steps": [
         {
           "order": 1,
-          "title": "O Sistema Financeiro Nacional e o Pix",
-          "description": "O Pix está inserido no SFN. O CMN define as políticas e o BCB as executa, sendo o gestor do arranjo. Esta hierarquia determina a origem de todas as normas aplicáveis.",
+          "title": "Hierarquia Normativa: CMN e BCB",
+          "description": "O CMN edita normas gerais e o BCB as regulamentações específicas. Gestores precisam entender essa hierarquia para priorizar projetos de conformidade e alocar recursos adequadamente.",
           "nodeIds": [
-            "ent:sfn",
             "ent:cmn",
-            "papel:bcb"
+            "papel:bcb",
+            "papel:banco-central-do-brasil"
           ]
         },
         {
           "order": 2,
-          "title": "Os Pilares Operacionais: DICT, STR, CIP",
-          "description": "O DICT gerencia chaves, o STR liquida transações e a CIP atua como câmara de compensação. Conhecer essas entidades é vital para entender o fluxo de ponta a ponta de uma transação Pix.",
+          "title": "Participantes do Arranjo: Papéis e Riscos",
+          "description": "Cada papel (PSP Direto, Indireto, ITP, usuários) tem responsabilidades distintas. Uma visão consolidada ajuda a mapear riscos operacionais, reputacionais e de compliance.",
           "nodeIds": [
-            "ent:dict",
-            "ent:str",
-            "ent:cip"
+            "papel:psp-direto",
+            "papel:psp-indireto",
+            "papel:iniciador-de-transacao-de-pagamento",
+            "papel:usuario-final-pagador",
+            "papel:usuario-final-recebedor"
           ]
         },
         {
           "order": 3,
-          "title": "Modelo de Participação",
-          "description": "A diferenciação entre PSP Direto e PSP Indireto impacta custos, responsabilidades e a alçada de atuação. Gestores precisam decidir o modelo mais adequado para sua instituição.",
+          "title": "Infraestrutura Sistêmica: DICT, STR e SFN",
+          "description": "DICT, STR e SFN são os componentes críticos. Gestores devem assegurar que as equipes técnicas mantenham interfaces estáveis e que haja planos de contingência para eventuais indisponibilidades.",
           "nodeIds": [
-            "papel:psp-direto",
-            "papel:psp-indireto"
+            "ent:dict",
+            "ent:str",
+            "ent:sfn"
           ]
         },
         {
           "order": 4,
-          "title": "Novos Atores e o Futuro",
-          "description": "ITPs e Iniciadores de Pagamento representam a evolução do arranjo. Gestores devem avaliar oportunidades de negócio e riscos associados a esses novos papéis.",
+          "title": "Autorregulação e Associações (CIP e FEBRABAN)",
+          "description": "CIP e FEBRABAN atuam na autorregulação e na padronização. Participação ativa nessas entidades pode oferecer vantagens estratégicas e acesso antecipado a mudanças regulatórias.",
           "nodeIds": [
-            "papel:itp",
-            "papel:iniciador-de-transacao-de-pagamento"
+            "ent:cip",
+            "ent:febraban"
           ]
         },
         {
           "order": 5,
-          "title": "O Ecossistema Completo",
-          "description": "A FEBRABAN e o CMN completam o cenário, representando o setor bancário e a regulação macro. Entender este ecossistema auxilia na tomada de decisões estratégicas.",
+          "title": "Governança e Gestão de Riscos",
+          "description": "O BCB espera que participantes tenham estrutura de governança clara. Gestores devem implementar comitês de riscos e compliance, com reportes periódicos ao regulador.",
           "nodeIds": [
-            "ent:febraban",
-            "ent:cmn"
+            "ent:bcb",
+            "papel:gestor-do-arranjo"
           ]
         }
       ]

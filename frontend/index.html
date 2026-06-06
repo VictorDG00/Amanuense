@@ -109,14 +109,18 @@
   <!-- Pipeline running view -->
   <div id="pipeline-view" class="view">
     <div class="pipeline-state">
-      <div class="pipeline-spinner"></div>
-      <h2>Pipeline em execução</h2>
+      <div id="pipeline-icon-wrap">
+        <div class="pipeline-spinner" id="pipeline-spinner"></div>
+      </div>
+      <h2 id="pipeline-heading">Pipeline em execução</h2>
       <p id="pipeline-status-msg">Iniciando…</p>
       <div class="progress-track-lg">
         <div id="progress-bar-main" class="progress-fill-lg"></div>
       </div>
+      <ul id="agent-steps" class="agent-steps"></ul>
       <p class="pipeline-tip">Pode fechar esta aba — o processo continua no servidor.<br>
       Ao voltar, a página retoma automaticamente.</p>
+      <button id="ver-grafo-btn" class="ver-grafo-btn hidden">Ver Grafo →</button>
     </div>
   </div>
 
@@ -125,7 +129,12 @@
     <div class="empty-state">
       <div class="empty-icon">⬡</div>
       <h2>Nenhum grafo encontrado</h2>
-      <p>Faça upload dos PDFs das normas jurídicas no painel lateral e execute o pipeline para gerar o grafo de conhecimento.</p>
+      <p>Para começar, siga os passos no painel lateral:</p>
+      <ol class="empty-steps">
+        <li>Clique em <strong>+ Adicionar PDFs</strong> e selecione os documentos</li>
+        <li>Clique em <strong>▶ Executar Pipeline</strong> para processar</li>
+        <li>O grafo de conhecimento será gerado automaticamente</li>
+      </ol>
     </div>
   </div>
 
@@ -198,6 +207,12 @@
 
 <div id="tooltip"></div>
 
-<script src="app.js?v=3"></script>
+<!-- Toast de notificação -->
+<div id="toast" class="toast hidden">
+  <span id="toast-msg"></span>
+  <button id="toast-close" class="toast-close">✕</button>
+</div>
+
+<script src="app.js?v=4"></script>
 </body>
 </html>

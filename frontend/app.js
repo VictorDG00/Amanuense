@@ -71,6 +71,7 @@ async function resumeRunningPipeline() {
     if (latest.status === "running") {
       hideLoading();
       switchView("pipeline");
+      initAgentSteps();
       updatePipelineView("Retomando conexão…", 0);
       connectSSE(latest.id);
       return true;
@@ -92,16 +93,16 @@ async function loadCorpusList() {
 function renderCorpusList(docs) {
   const list = $("corpus-list");
   if (!docs.length) {
-    list.innerHTML = `<div class="corpus-empty">Nenhum documento. Adicione PDFs.</div>`;
+    list.innerHTML = `<div class="corpus-empty">Nenhum documento. Adicione PDFs acima.</div>`;
     $("run-btn").disabled = true;
     return;
   }
 
   list.innerHTML = docs.map(d => `
     <div class="corpus-item">
-      <span class="corpus-status ${d.parsed ? 'parsed' : 'pending'}" title="${d.parsed ? 'Parseado' : 'Aguardando parse'}">●</span>
-      <span class="corpus-name" title="${d.id}">${d.description || d.id}</span>
-      <button class="corpus-remove" data-id="${escapeHtml(d.id)}" title="Remover">✕</button>
+      <span class="corpus-status ${d.parsed ? 'parsed' : 'pending'}" title="${d.parsed ? 'Parseado ✓' : 'Aguardando parse'}">${d.parsed ? '✓' : '⏳'}</span>
+      <span class="corpus-name" title="${escapeHtml(d.description || d.id)}">${escapeHtml(d.description || d.id)}</span>
+      <button class="corpus-remove" data-id="${escapeHtml(d.id)}" title="Remover documento">✕</button>
     </div>
   `).join("");
 
@@ -154,6 +155,7 @@ async function startPipeline() {
   }
 
   switchView("pipeline");
+  initAgentSteps();
   updatePipelineView("Iniciando…", 0);
   connectSSE(runId);
 }
@@ -189,47 +191,93 @@ async function checkIfFinished() {
 }
 
 const AGENT_LABELS = {
-  "corpus-scanner":      "Inventariando corpus…",
-  "norm-analyzer":       "Analisando normas…",
-  "hierarchy-analyzer":  "Mapeando hierarquia…",
-  "revocation-analyzer": "Detectando revogações…",
-  "implication-analyzer":"Detectando implicações…",
-  "domain-analyzer":     "Classificando domínios…",
-  "graph-builder":       "Construindo grafo…",
-  "graph-reviewer":      "Revisando grafo…",
-  "tour-builder":        "Gerando tours…",
+  "corpus-scanner":      "Inventariando corpus",
+  "norm-analyzer":       "Analisando normas",
+  "hierarchy-analyzer":  "Mapeando hierarquia",
+  "revocation-analyzer": "Detectando revogações",
+  "implication-analyzer":"Detectando implicações",
+  "domain-analyzer":     "Classificando domínios",
+  "graph-builder":       "Construindo grafo",
+  "graph-reviewer":      "Revisando grafo",
+  "tour-builder":        "Gerando tours",
 };
+
+const AGENT_SEQUENCE_ORDER = Object.keys(AGENT_LABELS);
+
+function initAgentSteps() {
+  const ul = $("agent-steps");
+  if (!ul) return;
+  ul.innerHTML = AGENT_SEQUENCE_ORDER.map(agent => `
+    <li class="agent-step" id="step-${agent}">
+      <span class="agent-step-icon">○</span>
+      <span>${AGENT_LABELS[agent]}</span>
+    </li>
+  `).join("");
+}
+
+function markAgentStep(agent, status) {
+  const el = $(`step-${agent}`);
+  if (!el) return;
+  el.className = `agent-step ${status}`;
+  const icon = status === "done" ? "✓" : status === "active" ? "▶" : "○";
+  el.querySelector(".agent-step-icon").textContent = icon;
+}
 
 function handleProgressEvent(event, es) {
   if (event.type === "agent_start") {
     const pct = Math.round((event.index / event.total) * 100);
-    updatePipelineView(AGENT_LABELS[event.agent] || event.agent, pct);
+    const label = `Etapa ${event.index + 1} de ${event.total} — ${AGENT_LABELS[event.agent] || event.agent}`;
+    updatePipelineView(label, pct);
+    markAgentStep(event.agent, "active");
   }
   if (event.type === "agent_done") {
     const pct = Math.round(((event.index + 1) / event.total) * 100);
-    updatePipelineView(AGENT_LABELS[event.agent] || event.agent, pct);
+    const label = `Etapa ${event.index + 1} de ${event.total} — ${AGENT_LABELS[event.agent] || event.agent}`;
+    updatePipelineView(label, pct);
+    markAgentStep(event.agent, "done");
   }
   if (event.type === "done") {
     es.close();
     updatePipelineView("Concluído!", 100);
-    setTimeout(() => window.location.reload(), 1200);
+    // Mark all remaining as done
+    AGENT_SEQUENCE_ORDER.forEach(a => {
+      const el = $(`step-${a}`);
+      if (el && !el.classList.contains("done")) markAgentStep(a, "done");
+    });
+    // Switch spinner to checkmark
+    $("pipeline-spinner").style.display = "none";
+    const wrap = $("pipeline-icon-wrap");
+    wrap.innerHTML = `<div class="pipeline-done-icon">✓</div>`;
+    $("pipeline-heading").textContent = "Pipeline concluído!";
+    $("ver-grafo-btn").classList.remove("hidden");
+    showToast("✓ Grafo gerado com sucesso — clique em Ver Grafo para explorar");
   }
   if (event.type === "error" || event.type === "agent_error") {
     es.close();
     switchView("empty");
     $("run-btn").disabled = false;
-    alert("Erro no pipeline: " + (event.message || "erro desconhecido"));
+    showToast("Erro no pipeline: " + (event.message || "erro desconhecido"), "error");
   }
 }
 
 function updatePipelineView(label, pct) {
-  // Sidebar mini-bar
   $("progress-panel").classList.remove("hidden");
   $("progress-agent").textContent = label;
   $("progress-bar").style.width = pct + "%";
-  // Main area
   $("pipeline-status-msg").textContent = label;
   $("progress-bar-main").style.width = pct + "%";
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = "success") {
+  const toast = $("toast");
+  $("toast-msg").textContent = msg;
+  toast.className = `toast${type === "error" ? " toast-error" : ""}`;
+  if (type !== "error") setTimeout(() => hideToast(), 8000);
+}
+
+function hideToast() {
+  $("toast").classList.add("hidden");
 }
 
 // ── Sidebar Stats ──────────────────────────────────────────────────────────────
@@ -366,8 +414,8 @@ function renderGraph() {
     .append("text")
     .attr("dy", d => nodeRadius(d) + 10)
     .attr("text-anchor", "middle")
-    .attr("font-size", "9px")
-    .attr("font-family", "'JetBrains Mono', monospace")
+    .attr("font-size", "11px")
+    .attr("font-family", "'Crimson Pro', serif")
     .attr("fill", "#3d5166")
     .text(d => d.label?.substring(0, 30) || d.id?.split(":")[1] || "");
 
@@ -735,6 +783,8 @@ function bindEvents() {
 function bindCorpusEvents() {
   $("file-input").addEventListener("change", (e) => handleUpload(Array.from(e.target.files)));
   $("run-btn").addEventListener("click", startPipeline);
+  $("toast-close").addEventListener("click", hideToast);
+  $("ver-grafo-btn").addEventListener("click", () => window.location.reload());
 
   const corpusSection = $("corpus-section");
   corpusSection.addEventListener("dragover", (e) => { e.preventDefault(); corpusSection.classList.add("drag-over"); });
