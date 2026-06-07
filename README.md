@@ -1,31 +1,16 @@
-# Amanuense — Vade Mecum do Futuro
+# Amanuense
 
-Pipeline multi-agente que transforma PDFs de normas jurídicas em um grafo de conhecimento navegável, com foco inicial no ecossistema regulatório do Banco Central do Brasil (Pix e afins).
+Pipeline multi-agente que transforma PDFs de normas jurídicas em um grafo de conhecimento navegável, com foco inicial no ecossistema regulatório Pix/BCB.
+
+```
+PDF de norma → 9 agentes → knowledge-graph.json → visualizador D3.js
+```
 
 ## O que faz
 
-1. Você joga PDFs de normas em `corpus/raw/`
-2. O pipeline converte, analisa e relaciona tudo via LLM (DeepSeek-V3)
-3. O resultado é um grafo interativo navegável no browser
-
-## Estrutura
-
-```
-corpus/
-  raw/        # PDFs das normas (ignorado pelo git)
-  parsed/     # Markdown extraído dos PDFs (gerado automaticamente)
-pipeline/
-  agents/     # Cada agente da sequência de análise
-  graph/      # Builder, exporter e lógica de vigência
-  parsers/    # Extração de estrutura (artigos, incisos, parágrafos)
-  prompts/    # Prompts de sistema de cada agente (.md)
-  schemas/    # Modelos Pydantic (nós, arestas, grafo)
-  utils/      # Cliente LLM, fábrica de IDs, helpers
-frontend/     # Visualizador HTML/JS com D3.js (sem build step)
-output/       # Arquivos gerados (knowledge-graph.json, graph-data.js…)
-intermediate/ # Estado entre runs (ignorado pelo git)
-scripts/      # Utilitários de linha de comando
-```
+1. Você coloca PDFs em `corpus/raw/`
+2. O pipeline extrai estrutura (artigos, incisos, parágrafos), detecta relações entre normas por regex e enriquece com LLM (DeepSeek-V3)
+3. O resultado é um grafo interativo navegável no browser, com rastreamento de vigência (quem revogou quem, o que está em vigor)
 
 ## Instalação
 
@@ -35,73 +20,165 @@ pip install -e ".[dev]"
 cp .env.example .env   # preencha DEEPSEEK_API_KEY
 ```
 
-## Uso
-
-### 1. Converter PDFs para Markdown
+Para a API HTTP e banco de dados:
 
 ```bash
+pip install -e ".[api]"
+```
+
+## Uso rápido
+
+```bash
+# Converter PDFs para Markdown
 python scripts/parse_pdfs.py
-```
 
-Coloque os PDFs em `corpus/raw/` com nomes que correspondam aos IDs do corpus (ex: `resolucao-bcb-001-2020.pdf`). O script converte para `corpus/parsed/*.md`.
-
-### 2. Rodar o pipeline completo
-
-```bash
+# Rodar o pipeline completo
 amanuense run
-# ou
-python scripts/run_pipeline.py
+
+# Visualizar no browser (http://localhost:8080)
+amanuense serve
 ```
 
-Opções úteis:
+## CLI
 
 ```bash
-amanuense run --resume              # pula agentes com output existente
-amanuense run --agent norm-analyzer # roda só um agente
-amanuense run --file resolucao-bcb-001-2020  # processa só um documento
-```
+amanuense run                             # pipeline completo
+amanuense run --resume                    # pula agentes já processados
+amanuense run --agent norm-analyzer       # roda só um agente
+amanuense run --file resolucao-bcb-001    # processa só um documento
+amanuense run --run-id meu-run-2024       # ID customizado para o run
 
-### 3. Validar o grafo gerado
+amanuense validate                        # valida knowledge-graph.json
+amanuense validate output/meu-grafo.json  # valida arquivo específico
 
-```bash
-amanuense validate
-```
-
-### 4. Visualizar no browser
-
-```bash
-amanuense serve          # http://localhost:8080
+amanuense serve                           # frontend em http://localhost:8080
 amanuense serve --port 3000
 ```
 
-## Sequência de Agentes
+## Sequência de agentes
 
-| # | Agente | Entrada | Saída |
-|---|--------|---------|-------|
-| 1 | `corpus-scanner` | PDFs em `corpus/raw/` | `scan_manifest.json` |
-| 2 | `norm-analyzer` | Manifest + parsed MDs | Nós do grafo (normas, artigos, incisos) |
-| 3 | `hierarchy-analyzer` | Nós | Arestas de hierarquia normativa |
-| 4 | `revocation-analyzer` | Nós | Arestas de revogação + log de vigência |
-| 5 | `implication-analyzer` | Nós | Arestas de implicação implícita (LLM) |
-| 6 | `domain-analyzer` | Nós | Nós de domínio + arestas de classificação |
-| 7 | `graph-builder` | Todos os intermediários | `knowledge-graph.json` + arquivos de frontend |
-| 8 | `graph-reviewer` | Grafo | Revisão de qualidade |
-| 9 | `tour-builder` | Grafo | Tours guiados para o frontend |
+O pipeline executa 9 agentes em sequência. Cada um lê de `intermediate/<run-id>/` e escreve seu output lá.
 
-## Variáveis de Ambiente
+| # | Agente | O que faz | Usa LLM |
+|---|--------|-----------|---------|
+| 1 | `corpus-scanner` | Inventaria `corpus/raw/`, auto-converte PDFs para Markdown | Não |
+| 2 | `norm-analyzer` | Extrai nós do grafo (normas, artigos, incisos) e gera summaries + tags | Sim |
+| 3 | `hierarchy-analyzer` | Cria arestas de hierarquia normativa (ex: resolução regulamenta circular) | Não |
+| 4 | `revocation-analyzer` | Detecta revogações e alterações por regex nos textos | Não |
+| 5 | `implication-analyzer` | Infere relações implícitas entre artigos com score de confiança | Sim |
+| 6 | `domain-analyzer` | Extrai nós de domínio: definições legais, prazos, papéis institucionais | Sim |
+| 7 | `graph-builder` | Monta o grafo final a partir dos 5 intermediários, aplica vigência | Não |
+| 8 | `graph-reviewer` | Revisão de qualidade (interativa ou auto-approve se confiança ≥ 0.85) | Sim |
+| 9 | `tour-builder` | Cria roteiros temáticos para 4 perfis (advogado, compliance, técnico, gestor) | Sim |
+
+Os agentes que usam LLM têm prompts de sistema em `pipeline/prompts/<agent-name>.md`.
+
+## Saídas geradas
+
+Após `amanuense run`, o diretório `output/` conterá:
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `knowledge-graph.json` | Grafo completo: nós + arestas + metadados de vigência |
+| `vigency-index.json` | Status de cada norma (vigente / revogado / suspenso / alterado) |
+| `diff-log.json` | Histórico de revogações e alterações detectadas |
+| `corpus-texts.json` | Textos completos dos artigos para referência |
+| `graph-data.js` | Versão JS dos dados do grafo para o frontend |
+| `vigency-data.js` | Versão JS do índice de vigência para o frontend |
+
+## Estrutura do projeto
+
+```
+pipeline/
+  agents/          # Um arquivo por agente da sequência
+  graph/           # builder.py, vigency.py, exporter.py, traversal.py
+  parsers/         # Extração estrutural de PDFs → Markdown (artigos, incisos, alíneas)
+  prompts/         # Prompts de sistema de cada agente (.md)
+  schemas/         # Modelos Pydantic — fonte da verdade do grafo
+  utils/           # LLMClient, id_factory.py, llm_helpers.py
+
+api/               # FastAPI: upload de PDFs + trigger de pipeline via HTTP
+db/                # SQLAlchemy models (CorpusDocument, PipelineRun) + migrations Alembic
+
+frontend/          # Visualizador HTML/JS + D3.js (sem build step)
+scripts/           # parse_pdfs.py, validate_graph.py, check_vigency.py
+corpus/
+  raw/             # PDFs de entrada (ignorado pelo git)
+  parsed/          # Markdown extraído (gerado automaticamente)
+  registry.json    # Metadados de cada documento
+output/            # Arquivos gerados pelo pipeline
+intermediate/      # Estado entre runs (ignorado pelo git)
+```
+
+## Schemas (pipeline/schemas/)
+
+Todos os tipos são Pydantic v2. Novos tipos sempre vão aqui, nunca inline nos agentes.
+
+- **`node.py`** — `GraphNode`, `NodeType` (13 tipos), `VigencyStatus`, `NormativeLayer`, `VigenciaMeta`, `NormaMeta`
+- **`edge.py`** — `GraphEdge`, `EdgeType` (31 tipos de relação), `EDGE_DEFAULT_WEIGHTS`
+- **`graph.py`** — `KnowledgeGraph`, `Layer`, `TourStep`
+- **`outputs.py`** — `VigencyIndex`, `DiffLog`, `CorpusTexts`
+
+### Tipos de aresta (principais)
+
+O grafo suporta 31 tipos de relação. Alguns exemplos:
+
+| Categoria | Tipos |
+|-----------|-------|
+| Hierarquia | `regulamenta`, `complementa`, `institui` |
+| Revogação | `revoga_expressamente`, `revoga_tacitamente`, `altera` |
+| Implicação | `obriga`, `proibe`, `condiciona`, `excepciona`, `define` |
+| Domínio | `classifica`, `exemplifica`, `referencia` |
+
+Arestas inferidas por LLM carregam um score de confiança (0.70–1.0). Arestas abaixo do threshold são marcadas `review_required = True`.
+
+## Vigência
+
+O `graph-builder` aplica e propaga vigência em cascata:
+
+- Uma norma marcada como `revogada` propaga o status para seus artigos
+- Alterações parciais (um artigo revogado) não afetam o status da norma-mãe
+- O `vigency-index.json` registra o status final de cada nó com a cadeia de evidências
+
+## Variáveis de ambiente
 
 | Variável | Padrão | Descrição |
 |----------|--------|-----------|
 | `DEEPSEEK_API_KEY` | — | Chave da API DeepSeek (obrigatória) |
 | `AMANUENSE_MODEL` | `deepseek-chat` | Modelo a usar |
-| `AMANUENSE_MAX_TOKENS` | `8192` | Máximo de tokens por chamada |
+| `AMANUENSE_MAX_TOKENS` | `8192` | Máximo de tokens por chamada LLM |
 | `AMANUENSE_CORPUS_DIR` | `corpus` | Diretório do corpus |
 | `AMANUENSE_OUTPUT_DIR` | `output` | Diretório de saída |
 | `AMANUENSE_INTERMEDIATE_DIR` | `intermediate` | Estado intermediário entre runs |
 
+## API HTTP (opcional)
+
+Uma API FastAPI permite operar o pipeline sem CLI:
+
+```bash
+uvicorn api.main:app --reload
+```
+
+Endpoints disponíveis:
+
+| Método | Rota | Função |
+|--------|------|--------|
+| `GET` | `/api/corpus` | Lista documentos do corpus |
+| `POST` | `/api/corpus/upload` | Faz upload de um PDF |
+| `DELETE` | `/api/corpus/{doc_id}` | Remove um documento |
+| `POST` | `/api/run` | Inicia o pipeline |
+
+## Docker
+
+```bash
+docker-compose up
+```
+
+Sobe dois containers: `amanuense` (frontend + Nginx) e `amanuense-api` (FastAPI). Os diretórios `corpus/`, `output/` e `intermediate/` são volumes compartilhados.
+
 ## Corpus MVP (Pix/BCB)
 
-O `corpus-scanner` já conhece estes documentos por nome de arquivo:
+Os documentos abaixo são reconhecidos automaticamente pelo `corpus-scanner` pelo nome do arquivo:
 
 - `resolucao-bcb-001-2020` — Regulamento do arranjo Pix
 - `circular-bcb-3952-2019` — Regulamenta o arranjo Pix
@@ -110,10 +187,18 @@ O `corpus-scanner` já conhece estes documentos por nome de arquivo:
 - `manual-requisitos-tecnicos-pix` — Manual de Requisitos Técnicos
 - `manual-seguranca-pix` — Manual de Segurança
 
-## Testes
+## Testes e qualidade
 
 ```bash
 pytest
 ruff check pipeline/
 mypy pipeline/
 ```
+
+## Convenções para contribuição
+
+- IDs de nós: usar sempre `norma_id()`, `artigo_id()`, `inciso_id()`, `paragrafo_id()` de `pipeline/utils/id_factory.py`
+- Novos schemas: sempre em `pipeline/schemas/` — o `graph-builder` valida com `model_validate`
+- Novos prompts: em `pipeline/prompts/<agent-name>.md` — `BaseAgent.load_prompt()` resolve o path
+- Novos agentes: herdar de `BaseAgent`, implementar `run(intermediate_dir, corpus_dir)`, registrar em `AGENT_SEQUENCE` e `_run_agent()` em `pipeline/run.py`
+- `LLMClient` (importado como `ClaudeClient` em código legado) usa DeepSeek-V3 via OpenAI SDK — não é a API da Anthropic
