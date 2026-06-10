@@ -9,7 +9,7 @@ Pipeline multi-agente Python que transforma PDFs de normas jurídicas (foco BCB/
 - Python 3.11, Pydantic v2, Click, Rich
 - `pdfplumber` + `pymupdf` para extração de PDF
 - `networkx` para manipulação de grafo
-- Frontend: HTML/JS + D3.js, sem build step
+- Frontend: HTML/JS, sem build step — grafo 3D imersivo via `3d-force-graph`/Three.js (CDN), com fallback 2D em D3.js
 - LLM: DeepSeek-V3 (`deepseek-chat`)
 
 ## Estrutura crítica
