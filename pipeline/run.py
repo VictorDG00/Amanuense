@@ -110,6 +110,7 @@ def _run_agent(name: str, intermediate_dir: Path) -> None:
         from .graph.builder import GraphBuilder
         builder = GraphBuilder(intermediate_dir)
         builder.load_agents()
+        builder.load_legislacao()
         builder.apply_vigency_updates()
         graph = builder.build()
         errors = builder.validate(graph)

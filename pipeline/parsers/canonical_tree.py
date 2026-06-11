@@ -21,6 +21,7 @@ from ..schemas.legislacao import (
     NormaCanonica,
 )
 from ..utils.id_factory import (
+    PARAGRAFO_ORDEM_OFFSET,
     canon_alinea,
     canon_artigo,
     canon_inciso,
@@ -205,7 +206,8 @@ def build_canonical_tree(
                 tipo="paragrafo",
                 rotulo=f"§ {numero_par}º" if int(numero_par) <= 9 else f"§ {numero_par}.",
                 numero=numero_par,
-                ordem_sequencial=str(ordem_sequencial(numero_par)),
+                # offset: parágrafos vêm depois dos incisos do caput
+                ordem_sequencial=str(ordem_sequencial(numero_par) + PARAGRAFO_ORDEM_OFFSET),
             )
             _abrir(disp, 1, m.group(2))
             continue

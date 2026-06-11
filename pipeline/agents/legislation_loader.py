@@ -23,6 +23,7 @@ from ..schemas.legislacao import (
     DispositivoCanonico,
     ItemRevisao,
     NormaCanonica,
+    texto_vigente,
 )
 from .base import BaseAgent
 
@@ -343,20 +344,12 @@ def _normalizar(texto: str) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFC", texto)).strip()
 
 
-def _texto_vigente(disp: DispositivoCanonico) -> str | None:
-    """Texto vigente hoje segundo a árvore (último evento confiável ou original)."""
-    for ev in reversed(disp.historico):
-        if ev.confiavel:
-            return "(Revogado)" if ev.evento == "revogacao" else ev.texto
-    return disp.texto_original
-
-
 def _consolidado_da_arvore(norma: NormaCanonica, nivel: int = 0) -> str:
     """Replica o formato de fn_texto_consolidado a partir da árvore canônica."""
     linhas: list[str] = []
 
     def _emit(disp: DispositivoCanonico, nivel: int) -> None:
-        texto = _texto_vigente(disp)
+        texto = texto_vigente(disp)
         if texto is None:
             return  # dispositivo sem texto confiável não foi carregado (nem os filhos)
         linhas.append("    " * nivel + f"{disp.rotulo} {texto}")

@@ -91,6 +91,18 @@ class NormaCanonica(BaseModel):
     review_required: bool = False
 
 
+def texto_vigente(disp: DispositivoCanonico) -> Optional[str]:
+    """Texto vigente hoje segundo a árvore: último evento confiável ou o original.
+
+    Retorna '(Revogado)' para dispositivo revogado e None quando não há texto
+    confiável (dispositivo que ficou na fila de revisão).
+    """
+    for ev in reversed(disp.historico):
+        if ev.confiavel:
+            return "(Revogado)" if ev.evento == "revogacao" else ev.texto
+    return disp.texto_original
+
+
 def iter_dispositivos(norma: NormaCanonica):
     """Percorre todos os dispositivos da árvore em profundidade (pré-ordem)."""
 

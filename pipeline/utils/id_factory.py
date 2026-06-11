@@ -7,7 +7,9 @@ from decimal import Decimal
 _ROMAN_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
 _ROMAN_RE = re.compile(r"^[IVXLCDM]+$")
 
-# Ordem reservada para "parágrafo único" — sempre depois de qualquer § numerado.
+# Parágrafos ordenam-se depois dos incisos do caput sob o mesmo artigo:
+# § N → 500 + N. "Parágrafo único" fica depois de qualquer § numerado.
+PARAGRAFO_ORDEM_OFFSET = Decimal("500")
 PARAGRAFO_UNICO_ORDEM = Decimal("999")
 
 

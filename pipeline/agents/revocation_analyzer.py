@@ -83,8 +83,9 @@ class RevocationAnalyzerAgent(BaseAgent):
             text = parsed_path.read_text(encoding="utf-8")
             dataVigor = doc.get("dataVigor") or doc.get("dataPublicacao") or date.today().isoformat()
 
-            # Scan sentences for revocation patterns
-            sentences = re.split(r'(?<=[.;])\s+', text)
+            # Scan sentences for revocation patterns. O split exige letra
+            # maiúscula/§ à frente para não quebrar em "art. 4", "nº 42." etc.
+            sentences = re.split(r'(?<=[.;])\s+(?=[A-ZÀ-Ú§])', text)
             for sentence in sentences:
                 is_express = any(p.search(sentence) for p in REVOGA_EXPRESSAMENTE_PATTERNS)
                 is_partial = not is_express and any(p.search(sentence) for p in REVOGA_PARCIALMENTE_PATTERNS)
@@ -107,8 +108,12 @@ class RevocationAnalyzerAgent(BaseAgent):
                     etype = EdgeType.ALTERA
                     change_type = "alter"
 
-                # Extract referenced articles
-                for ref_match in CROSS_REF_RE.finditer(sentence):
+                # Extract referenced articles — sem o cabeçalho do próprio
+                # artigo ("Art. 2º Fica revogado..."), que não é alvo
+                scan_sentence = re.sub(
+                    r"^Art\.\s*\d+(?:-[A-Z])?\s*[º°]?\.?\s*", "", sentence
+                )
+                for ref_match in CROSS_REF_RE.finditer(scan_sentence):
                     art_num = ref_match.group(1)
                     ref_doc_num = ref_match.group(2)
                     if not art_num:
