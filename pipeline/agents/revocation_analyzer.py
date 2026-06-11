@@ -86,7 +86,12 @@ class RevocationAnalyzerAgent(BaseAgent):
             # Scan sentences for revocation patterns. O split exige letra
             # maiúscula/§ à frente para não quebrar em "art. 4", "nº 42." etc.
             sentences = re.split(r'(?<=[.;])\s+(?=[A-ZÀ-Ú§])', text)
+            cursor = 0  # posição da sentença corrente no texto original
             for sentence in sentences:
+                sent_pos = text.find(sentence, cursor)
+                if sent_pos == -1:
+                    sent_pos = cursor
+                cursor = sent_pos + len(sentence)
                 is_express = any(p.search(sentence) for p in REVOGA_EXPRESSAMENTE_PATTERNS)
                 is_partial = not is_express and any(p.search(sentence) for p in REVOGA_PARCIALMENTE_PATTERNS)
                 is_suspend = any(p.search(sentence) for p in SUSPENDE_PATTERNS)
@@ -113,6 +118,22 @@ class RevocationAnalyzerAgent(BaseAgent):
                 scan_sentence = re.sub(
                     r"^Art\.\s*\d+(?:-[A-Z])?\s*[º°]?\.?\s*", "", sentence
                 )
+
+                # source: find enclosing article (uma vez por sentença); o
+                # limite sent_pos+4 inclui o cabeçalho "Art. N" da própria
+                # sentença, que é o artigo que contém a revogação
+                art_before = text.rfind("Art.", 0, sent_pos + 4)
+                src_art_match = (
+                    re.search(r"Art\.\s*(\d+(?:-[A-Z])?)", text[art_before : art_before + 30])
+                    if art_before >= 0 else None
+                )
+                src_art_num = src_art_match.group(1) if src_art_match else None
+                src_canon = canon_artigo(src_art_num) if src_art_num else None
+                src_art_id = (
+                    disp_node_id(doc_id, src_canon) if src_canon
+                    else disp_node_id(doc_id, "disposicoesfinais")
+                )
+
                 for ref_match in CROSS_REF_RE.finditer(scan_sentence):
                     art_num = ref_match.group(1)
                     ref_doc_num = ref_match.group(2)
@@ -125,16 +146,6 @@ class RevocationAnalyzerAgent(BaseAgent):
                     except ValueError:
                         continue
                     target_art_id = disp_node_id(target_doc_id, target_canon)
-
-                    # source: find enclosing article
-                    art_before = text[: text.find(sentence)].rfind("Art.")
-                    src_art_match = re.search(r"Art\.\s*(\d+(?:-[A-Z])?)", text[max(0, art_before) : art_before + 30])
-                    src_art_num = src_art_match.group(1) if src_art_match else None
-                    src_canon = canon_artigo(src_art_num) if src_art_num else None
-                    src_art_id = (
-                        disp_node_id(doc_id, src_canon) if src_canon
-                        else disp_node_id(doc_id, "disposicoesfinais")
-                    )
 
                     eid = edge_id(src_art_id, etype.value, target_art_id)
                     is_external = target_art_id not in known_art_ids

@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from pipeline.agents.corpus_scanner import _clean_text, _ensure_parsed, _pdf_to_markdown

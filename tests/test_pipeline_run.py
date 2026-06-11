@@ -1,6 +1,5 @@
 import pytest
-from pathlib import Path
-from unittest.mock import patch, call
+from unittest.mock import patch
 
 
 def test_callback_receives_agent_start_and_done(tmp_path):

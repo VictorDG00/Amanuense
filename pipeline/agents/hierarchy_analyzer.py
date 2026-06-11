@@ -73,8 +73,7 @@ class HierarchyAnalyzerAgent(BaseAgent):
                     layers_map.setdefault(layer_val, []).append(node["id"])
 
         # Find REGULAMENTA relationships: circular → resolucao
-        doc_type_map = {d["documentId"]: d.get("type", "").lower() for d in documents}
-        doc_meta_map = {d["documentId"]: d for d in documents}
+        seen_edge_ids: set[str] = set()
 
         for doc in documents:
             doc_id = doc["documentId"]
@@ -121,7 +120,8 @@ class HierarchyAnalyzerAgent(BaseAgent):
                 tgt_level = LAYER_LEVELS.get(_TYPE_LAYER.get(tgt_type, NormativeLayer.MANUAL), 99)
                 if src_level > tgt_level:
                     eid = edge_id(norma_id(doc_id), EdgeType.SUBORDINA_SE_A.value, norma_id(other_id))
-                    if not any(e["id"] == eid for e in edges):
+                    if eid not in seen_edge_ids:
+                        seen_edge_ids.add(eid)
                         edges.append({
                             "id": eid,
                             "source": norma_id(doc_id),
@@ -148,15 +148,19 @@ class HierarchyAnalyzerAgent(BaseAgent):
                     target_art_id = disp_node_id(target_doc_id, canon_artigo(art_num))
                 except ValueError:
                     continue
-                # find source article by position in text
-                art_before = text[: match.start()].rfind("Art.")
+                # find source article by position in text; sem artigo
+                # identificável (ex.: referência no preâmbulo), não inventa
+                # fonte — pula a aresta
+                art_before = text.rfind("Art.", 0, match.start())
                 src_art_text = text[art_before : art_before + 20] if art_before >= 0 else ""
                 src_art_match = re.search(r"Art\.\s*(\d+(?:-[A-Z])?)", src_art_text)
-                src_art_num = src_art_match.group(1) if src_art_match else "1"
-                src_art_id = disp_node_id(doc_id, canon_artigo(src_art_num))
+                if not src_art_match:
+                    continue
+                src_art_id = disp_node_id(doc_id, canon_artigo(src_art_match.group(1)))
 
                 eid = edge_id(src_art_id, EdgeType.REMETE_A.value, target_art_id)
-                if not any(e["id"] == eid for e in edges):
+                if eid not in seen_edge_ids:
+                    seen_edge_ids.add(eid)
                     edges.append({
                         "id": eid,
                         "source": src_art_id,

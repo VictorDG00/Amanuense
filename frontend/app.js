@@ -620,11 +620,11 @@ function renderGraph2D() {
   const W = canvas.clientWidth || 900;
   const H = canvas.clientHeight || 600;
 
-  const dataForHud = getFilteredData();
-  updateHudStats(dataForHud);
-  renderLegend(dataForHud);
+  const data = getFilteredData();
+  updateHudStats(data);
+  renderLegend(data);
 
-  const { nodes, links } = getFilteredData();
+  const { nodes, links } = data;
   if (nodes.length === 0) return;
 
   const svg = d3.select(canvas).append("svg")

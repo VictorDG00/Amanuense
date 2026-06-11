@@ -19,7 +19,6 @@ class GraphReviewerAgent(BaseAgent):
 
     def _review(self, graph_path: Path, auto_approve_above: float, interactive: bool) -> None:
         from rich.panel import Panel
-        from rich.text import Text
 
         data = json.loads(graph_path.read_text(encoding="utf-8"))
         edges = data.get("edges", [])

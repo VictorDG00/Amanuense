@@ -217,6 +217,10 @@ class ImplicationAnalyzerAgent(BaseAgent):
             edges_by_source_doc[doc_id] = doc_edge_ids
             processed_hashes[doc_id] = current_hashes.get(doc_id, "")
 
+        # docs removidos do corpus não deixam metadados obsoletos para trás
+        processed_hashes = {k: v for k, v in processed_hashes.items() if k in current_hashes}
+        edges_by_source_doc = {k: v for k, v in edges_by_source_doc.items() if k in current_hashes}
+
         output = {
             "generatedAt": datetime.now().isoformat(),
             "edges": all_edges,
