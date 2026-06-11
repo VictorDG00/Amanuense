@@ -1,4 +1,3 @@
-import pytest
 from pipeline.parsers.structure_parser import parse_document
 
 SAMPLE_ARTIGOS = """

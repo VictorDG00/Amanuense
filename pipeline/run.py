@@ -151,7 +151,8 @@ def initdb(with_demo: bool) -> None:
 @click.argument("graph_path", default="output/knowledge-graph.json")
 def validate(graph_path: str) -> None:
     """Validate a knowledge-graph.json file."""
-    import json, sys
+    import json
+    import sys
     path = Path(graph_path)
     if not path.exists():
         console.print(f"[red]ERROR:[/red] {path} not found")
@@ -183,7 +184,9 @@ def validate(graph_path: str) -> None:
 @click.option("--port", default=8080, help="HTTP server port")
 def serve(port: int) -> None:
     """Serve the frontend viewer at http://localhost:<port>"""
-    import subprocess, sys, webbrowser
+    import subprocess
+    import sys
+    import webbrowser
     from pathlib import Path as _Path
     frontend_dir = _Path(__file__).parent.parent / "frontend"
     if not frontend_dir.exists():

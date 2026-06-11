@@ -6,7 +6,7 @@ from ..parsers.bcb_patterns import DEFINICAO_RE, PRAZO_RE
 from ..schemas import (
     GraphNode, NodeType, EdgeType, EDGE_DEFAULT_WEIGHTS,
 )
-from ..utils.id_factory import definicao_id, papel_id, prazo_id, entidade_id, edge_id
+from ..utils.id_factory import definicao_id, papel_id, prazo_id, entidade_id, edge_id, doc_id_from_node
 from ..utils.llm_helpers import parse_json_response
 
 _FIXED_PAPEIS = [
@@ -75,28 +75,29 @@ class DomainAnalyzerAgent(BaseAgent):
         nodes: list[dict] = _make_fixed_nodes(vigencia_inicio, verificacao)
         edges: list[dict] = []
         seen_def_ids: set[str] = set()
+        seen_edge_ids: set[str] = set()
         prazo_counter: dict[str, int] = {}
 
-        # Restore preserved results from unchanged docs
+        # Restore preserved results from unchanged docs (docs removed from the
+        # corpus are not preserved, otherwise their nodes would linger forever)
         if existing_output:
             new_or_changed = {
                 doc_id for doc_id in current_hashes
                 if current_hashes.get(doc_id) != processed_hashes.get(doc_id)
             }
-            preserved_def_ids: set[str] = set()
-            preserved_edge_ids: set[str] = set()
             for n in existing_output.get("nodes", []):
                 src_doc = n.get("sourceDoc", "")
-                if src_doc and src_doc not in new_or_changed:
+                if src_doc and src_doc in current_hashes and src_doc not in new_or_changed:
                     nodes.append(n)
                     seen_def_ids.add(n["id"])
-                    preserved_def_ids.add(n["id"])
             for e in existing_output.get("edges", []):
-                from ..utils.id_factory import doc_id_from_node
                 source_doc = doc_id_from_node(e.get("source", ""))
-                if source_doc and source_doc not in new_or_changed:
+                if source_doc and source_doc in current_hashes and source_doc not in new_or_changed:
                     edges.append(e)
-                    preserved_edge_ids.add(e["id"])
+                    seen_edge_ids.add(e["id"])
+            processed_hashes = {
+                k: v for k, v in processed_hashes.items() if k in current_hashes
+            }
         else:
             new_or_changed = set(current_hashes)
 
@@ -131,19 +132,21 @@ class DomainAnalyzerAgent(BaseAgent):
                         nodes.append(node_dict)
 
                     eid = edge_id(art_id, EdgeType.DEFINE.value, def_id)
-                    edges.append({
-                        "id": eid,
-                        "source": art_id,
-                        "target": def_id,
-                        "type": EdgeType.DEFINE.value,
-                        "weight": EDGE_DEFAULT_WEIGHTS[EdgeType.DEFINE],
-                        "direction": "forward",
-                        "implicit": False,
-                        "textEvidence": m.group(0)[:200],
-                        "review_required": False,
-                        "deprecated": False,
-                        "stale": False,
-                    })
+                    if eid not in seen_edge_ids:
+                        seen_edge_ids.add(eid)
+                        edges.append({
+                            "id": eid,
+                            "source": art_id,
+                            "target": def_id,
+                            "type": EdgeType.DEFINE.value,
+                            "weight": EDGE_DEFAULT_WEIGHTS[EdgeType.DEFINE],
+                            "direction": "forward",
+                            "implicit": False,
+                            "textEvidence": m.group(0)[:200],
+                            "review_required": False,
+                            "deprecated": False,
+                            "stale": False,
+                        })
 
                 # Regex-based prazos
                 for m in PRAZO_RE.finditer(art_text):
@@ -162,6 +165,7 @@ class DomainAnalyzerAgent(BaseAgent):
                     nodes.append(pz_dict)
 
                     eid = edge_id(art_id, EdgeType.CONDICIONA.value, pz_id)
+                    seen_edge_ids.add(eid)
                     edges.append({
                         "id": eid,
                         "source": art_id,
@@ -204,7 +208,8 @@ class DomainAnalyzerAgent(BaseAgent):
                                 llm_def_dict["sourceDoc"] = doc_id
                                 nodes.append(llm_def_dict)
                             eid = edge_id(art_id, EdgeType.DEFINE.value, def_id)
-                            if not any(e["id"] == eid for e in edges):
+                            if eid not in seen_edge_ids:
+                                seen_edge_ids.add(eid)
                                 edges.append({
                                     "id": eid,
                                     "source": art_id,

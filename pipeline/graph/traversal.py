@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import deque
 import networkx as nx
 from ..schemas import KnowledgeGraph, EdgeType
 
@@ -47,9 +48,9 @@ def find_article_correlations(
         return []
     results: list[tuple[str, str, int]] = []
     visited = {source_id}
-    queue = [(source_id, 0)]
+    queue = deque([(source_id, 0)])
     while queue:
-        current, depth = queue.pop(0)
+        current, depth = queue.popleft()
         if depth >= max_depth:
             continue
         for neighbor in list(nx_graph.successors(current)) + list(nx_graph.predecessors(current)):
@@ -68,9 +69,9 @@ def find_article_correlations(
 def get_normative_ancestors(nx_graph: nx.DiGraph, node_id: str) -> list[str]:
     ancestors: list[str] = []
     visited = {node_id}
-    queue = [node_id]
+    queue = deque([node_id])
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         for successor in nx_graph.successors(current):
             edge_data = nx_graph.get_edge_data(current, successor) or {}
             if edge_data.get("type") in _HIERARCHY_EDGE_TYPES and successor not in visited:

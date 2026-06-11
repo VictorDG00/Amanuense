@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import deque
 from datetime import date, datetime
 from pathlib import Path
 from .base import BaseAgent, load_prompt, console
@@ -8,7 +9,7 @@ from ..schemas import (
     GraphNode, NodeType, NormativeLayer, NormaMeta, VigenciaMeta, VigencyStatus,
 )
 from ..schemas.legislacao import DispositivoCanonico, NormaCanonica, texto_vigente
-from ..utils.id_factory import norma_id, disp_node_id
+from ..utils.id_factory import norma_id, disp_node_id, doc_id_from_node
 from ..utils.llm_helpers import parse_json_response
 
 _LAYER_FROM_TYPE: dict[str, NormativeLayer] = {
@@ -106,6 +107,18 @@ class NormAnalyzerAgent(BaseAgent):
         current_hashes: dict[str, str] = {
             d["documentId"]: d.get("fileHash", "") for d in documents
         }
+
+        # Drop docs removed from the corpus since the previous run, otherwise
+        # their cached nodes/texts would persist in the output forever
+        removed = set(by_document) - set(current_hashes)
+        if removed:
+            by_document = {k: v for k, v in by_document.items() if k not in removed}
+            processed_hashes = {k: v for k, v in processed_hashes.items() if k not in removed}
+            corpus_texts = {
+                nid: t for nid, t in corpus_texts.items()
+                if doc_id_from_node(nid) not in removed
+            }
+            console.print(f"[dim]  pruned removed docs: {', '.join(sorted(removed))}[/dim]")
 
         for doc_meta in documents:
             doc_id = doc_meta["documentId"]
@@ -225,9 +238,9 @@ class NormAnalyzerAgent(BaseAgent):
                 }
 
                 # nós dos dispositivos filhos (parágrafo/inciso/alínea/item/subitem)
-                pendentes = list(artigo.filhos)
+                pendentes = deque(artigo.filhos)
                 while pendentes:
-                    disp = pendentes.pop(0)
+                    disp = pendentes.popleft()
                     pendentes.extend(disp.filhos)
                     texto_disp = texto_vigente(disp) or ""
                     child_node = GraphNode(
