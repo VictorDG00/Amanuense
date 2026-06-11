@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, date
 from ..schemas import (
-    GraphNode, GraphEdge, KnowledgeGraph, VigencyStatus,
+    GraphNode, KnowledgeGraph, VigencyStatus,
     VigencyIndex, VigencyIndexEntry, DiffLog, DiffLogEntry,
     REVOCATION_EDGE_TYPES,
 )
@@ -35,37 +35,46 @@ def apply_vigency_updates(
     return list(node_map.values())
 
 
-def propagate_revocation(graph: KnowledgeGraph) -> KnowledgeGraph:
+def propagate_revocation(graph: KnowledgeGraph, statuses_from_db: bool = False) -> KnowledgeGraph:
+    """Propaga revogação pelos nós/arestas.
+
+    Com ``statuses_from_db=True`` (base de legislação habilitada) os status já
+    vieram do motor de versionamento — inclusive a cascata —, então apenas as
+    flags deprecated/stale das arestas são recalculadas aqui.
+    """
     node_map = {n.id: n for n in graph.nodes}
 
-    # Build child → parent map (ARTIGO/INCISO nodes grouped by sourceDocument)
-    norma_children: dict[str, list[str]] = {}
-    for node in graph.nodes:
-        if node.sourceDocument and node.type.value in ("artigo", "inciso", "paragrafo"):
-            parent_id = f"norma:{node.sourceDocument}"
-            norma_children.setdefault(parent_id, []).append(node.id)
+    if not statuses_from_db:
+        # Build child → parent map (dispositivos agrupados por sourceDocument)
+        norma_children: dict[str, list[str]] = {}
+        for node in graph.nodes:
+            if node.sourceDocument and node.type.value in (
+                "artigo", "inciso", "paragrafo", "alinea", "item", "subitem",
+            ):
+                parent_id = f"norma:{node.sourceDocument}"
+                norma_children.setdefault(parent_id, []).append(node.id)
 
-    # Find revoked nodes from edges
-    for edge in graph.edges:
-        if edge.type in REVOCATION_EDGE_TYPES:
-            target = node_map.get(edge.target)
-            if target and target.vigenciaMeta:
-                if edge.type.value == "revoga_expressamente":
-                    target.vigenciaMeta.status = VigencyStatus.REVOGADO
-                    edge.stale = True
-                elif edge.type.value == "suspende":
-                    target.vigenciaMeta.status = VigencyStatus.SUSPENSO
-                elif edge.type.value in ("altera", "revoga_parcialmente"):
-                    target.vigenciaMeta.status = VigencyStatus.ALTERADO
+        # Find revoked nodes from edges
+        for edge in graph.edges:
+            if edge.type in REVOCATION_EDGE_TYPES:
+                target = node_map.get(edge.target)
+                if target and target.vigenciaMeta:
+                    if edge.type.value == "revoga_expressamente":
+                        target.vigenciaMeta.status = VigencyStatus.REVOGADO
+                        edge.stale = True
+                    elif edge.type.value == "suspende":
+                        target.vigenciaMeta.status = VigencyStatus.SUSPENSO
+                    elif edge.type.value in ("altera", "revoga_parcialmente"):
+                        target.vigenciaMeta.status = VigencyStatus.ALTERADO
 
-    # Propagate REVOGADO from NORMA to its children
-    for node in graph.nodes:
-        if node.type.value == "norma" and node.vigenciaMeta:
-            if node.vigenciaMeta.status == VigencyStatus.REVOGADO:
-                for child_id in norma_children.get(node.id, []):
-                    child = node_map.get(child_id)
-                    if child and child.vigenciaMeta:
-                        child.vigenciaMeta.status = VigencyStatus.REVOGADO
+        # Propagate REVOGADO from NORMA to its children
+        for node in graph.nodes:
+            if node.type.value == "norma" and node.vigenciaMeta:
+                if node.vigenciaMeta.status == VigencyStatus.REVOGADO:
+                    for child_id in norma_children.get(node.id, []):
+                        child = node_map.get(child_id)
+                        if child and child.vigenciaMeta:
+                            child.vigenciaMeta.status = VigencyStatus.REVOGADO
 
     # Mark edges deprecated/stale
     for edge in graph.edges:
@@ -83,7 +92,6 @@ def build_vigency_index(graph: KnowledgeGraph, corpus: str) -> VigencyIndex:
     entries: list[VigencyIndexEntry] = []
     by_status: dict[str, int] = {}
 
-    node_map = {n.id: n for n in graph.nodes}
     affected_edges: dict[str, list[str]] = {}
     for edge in graph.edges:
         if edge.type in REVOCATION_EDGE_TYPES:

@@ -4,12 +4,10 @@ from datetime import datetime
 from pathlib import Path
 from rich.console import Console
 from ..schemas import (
-    GraphNode, GraphEdge, KnowledgeGraph, Layer, TourStep,
-    NodeType, VigencyStatus, VigenciaMeta, NormativeLayer,
+    GraphNode, GraphEdge, KnowledgeGraph, Layer,
 )
 from .vigency import apply_vigency_updates, propagate_revocation, build_vigency_index, build_diff_log
 from .exporter import to_json, write_js_data, build_corpus_texts
-from ..config import OUTPUT_DIR
 
 console = Console()
 
@@ -22,6 +20,8 @@ class GraphBuilder:
         self._layers: list[Layer] = []
         self._vigency_updates: list[dict] = []
         self._diff_log_entries: list[dict] = []
+        self._versoes_db: dict[str, dict] = {}
+        self._db_loaded: bool = False
 
     def _load(self, name: str) -> dict | None:
         path = self.intermediate_dir / name
@@ -76,7 +76,6 @@ class GraphBuilder:
                     self._edges.append(GraphEdge.model_validate(e))
                 except Exception as ex:
                     console.print(f"[yellow]⚠[/yellow]  skipping revocation edge: {ex}")
-            self._vigency_updates.extend(rev_data.get("vigencyUpdates", []))
             self._diff_log_entries.extend(rev_data.get("diffLogEntries", []))
 
         # 5. implication edges
@@ -90,6 +89,74 @@ class GraphBuilder:
 
     def apply_vigency_updates(self) -> None:
         self._nodes = apply_vigency_updates(self._nodes, self._vigency_updates)
+
+    def load_legislacao(self) -> None:
+        """Sobrescreve vigência/textos dos nós normativos com a base estruturada.
+
+        A base (PostgreSQL, motor de versionamento) é a fonte da verdade:
+        status, datas de vigência e relações altera/revoga/acrescenta vêm
+        dela. Summaries e tags do LLM são preservados. Sem
+        LEGISLACAO_DATABASE_URL, mantém o comportamento legado.
+        """
+        from db.legislacao import legislacao_enabled
+
+        if not legislacao_enabled():
+            return
+        loader_data = self._load("legislation_loader.json")
+        if not loader_data or not loader_data.get("normas"):
+            console.print(
+                "[yellow]⚠[/yellow] legislation_loader.json ausente — grafo sem dados da base"
+            )
+            return
+
+        from db.legislacao import get_conn
+        from .legislacao_source import (
+            fetch_diff_entries,
+            fetch_dispositivo_status,
+            fetch_norma_status,
+            fetch_relacao_edges,
+            fetch_versoes,
+        )
+
+        doc_map = {
+            doc_id: info["norma_id"] for doc_id, info in loader_data["normas"].items()
+        }
+        with get_conn() as conn:
+            disp_status = fetch_dispositivo_status(conn, doc_map)
+            norma_status = fetch_norma_status(conn, doc_map)
+            relacao_edges = fetch_relacao_edges(conn, doc_map)
+            self._versoes_db = fetch_versoes(conn, doc_map)
+            db_diff = fetch_diff_entries(conn, doc_map)
+
+        for node in self._nodes:
+            info = disp_status.get(node.id) or norma_status.get(node.id)
+            if info is None:
+                continue
+            if node.vigenciaMeta is not None and info["status"] is not None:
+                node.vigenciaMeta.status = info["status"]
+                if info.get("dataInicio"):
+                    node.vigenciaMeta.dataInicio = info["dataInicio"]
+                node.vigenciaMeta.dataFim = info.get("dataFim")
+            texto = info.get("texto")
+            if texto and node.id in disp_status and node.type.value != "artigo":
+                # summary de dispositivo-folha = texto vigente da base
+                node.summary = texto[:200]
+
+        for e in relacao_edges:
+            try:
+                self._edges.append(GraphEdge.model_validate(e))
+            except Exception as ex:
+                console.print(f"[yellow]⚠[/yellow]  skipping relacao edge: {ex}")
+
+        # diff-log derivado das versões reais (substitui as entradas por regex)
+        if db_diff:
+            self._diff_log_entries = db_diff
+
+        self._db_loaded = True
+        console.print(
+            f"[green]✓[/green] base estruturada: {len(disp_status)} dispositivos, "
+            f"{len(relacao_edges)} relações, {len(self._versoes_db)} históricos de versão"
+        )
 
     def _deduplicate(self) -> None:
         # nodes: last-writer wins, review_required is OR'd
@@ -125,7 +192,7 @@ class GraphBuilder:
             tours=[],
         )
 
-        graph = propagate_revocation(graph)
+        graph = propagate_revocation(graph, statuses_from_db=self._db_loaded)
         return graph
 
     def validate(self, graph: KnowledgeGraph) -> list[str]:
@@ -162,7 +229,7 @@ class GraphBuilder:
         console.print(f"[green]✓[/green] {output_dir}/diff-log.json")
 
         # 4. corpus-texts.json
-        ct = build_corpus_texts(self.intermediate_dir, graph)
+        ct = build_corpus_texts(self.intermediate_dir, graph, versoes_db=self._versoes_db)
         (output_dir / "corpus-texts.json").write_text(
             json.dumps(ct, ensure_ascii=False, indent=2, default=str),
             encoding="utf-8",

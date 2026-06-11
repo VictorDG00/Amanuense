@@ -5,7 +5,7 @@ from pathlib import Path
 from .base import BaseAgent, console
 from ..parsers.bcb_patterns import CROSS_REF_RE, REGULAMENTA_RE
 from ..schemas import EdgeType, EDGE_DEFAULT_WEIGHTS, NormativeLayer, LAYER_LEVELS
-from ..utils.id_factory import norma_id, artigo_id, edge_id
+from ..utils.id_factory import norma_id, canon_artigo, disp_node_id, edge_id
 
 # Mapping corpus doc types to normative layer
 _TYPE_LAYER: dict[str, NormativeLayer] = {
@@ -144,13 +144,16 @@ class HierarchyAnalyzerAgent(BaseAgent):
                 if not target_doc_id or target_doc_id == doc_id:
                     continue
                 # find article node in target
-                target_art_id = artigo_id(target_doc_id, art_num)
+                try:
+                    target_art_id = disp_node_id(target_doc_id, canon_artigo(art_num))
+                except ValueError:
+                    continue
                 # find source article by position in text
                 art_before = text[: match.start()].rfind("Art.")
                 src_art_text = text[art_before : art_before + 20] if art_before >= 0 else ""
                 src_art_match = re.search(r"Art\.\s*(\d+(?:-[A-Z])?)", src_art_text)
                 src_art_num = src_art_match.group(1) if src_art_match else "1"
-                src_art_id = artigo_id(doc_id, src_art_num)
+                src_art_id = disp_node_id(doc_id, canon_artigo(src_art_num))
 
                 eid = edge_id(src_art_id, EdgeType.REMETE_A.value, target_art_id)
                 if not any(e["id"] == eid for e in edges):

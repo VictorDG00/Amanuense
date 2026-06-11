@@ -11,18 +11,28 @@ from ..parsers.bcb_patterns import (
     ANAFORA_RE,
     CROSS_REF_RE,
 )
-from ..schemas import EdgeType, VigencyStatus, EDGE_DEFAULT_WEIGHTS
-from ..utils.id_factory import norma_id, artigo_id, versao_id, edge_id
+from ..schemas import EdgeType, EDGE_DEFAULT_WEIGHTS
+from ..utils.id_factory import canon_artigo, disp_node_id, edge_id
 
-
-def _resolve_target(doc_lookup: dict[str, str], ref_doc: str | None, art_num: str | None, fallback_doc: str) -> str | None:
-    if not art_num:
-        return None
-    target_doc = doc_lookup.get(ref_doc, fallback_doc) if ref_doc else fallback_doc
-    return artigo_id(target_doc, art_num)
+# tipo de relação na base estruturada por tipo de aresta detectada
+_RELACAO_POR_EDGE = {
+    EdgeType.REVOGA_EXPRESSAMENTE: "revoga",
+    EdgeType.ALTERA: "altera",
+    EdgeType.SUSPENDE: "suspende",
+}
 
 
 class RevocationAnalyzerAgent(BaseAgent):
+    """Detecta revogações/alterações/suspensões por regex e as registra.
+
+    As arestas continuam alimentando o grafo; quando a base estruturada está
+    habilitada, as detecções também são gravadas nela: revogação expressa via
+    fn_registrar_revogacao (o motor versiona e propaga em cascata) e
+    alteração/suspensão como relacao_normativa. A alteração de texto NUNCA é
+    aplicada aqui — sem a nova redação extraída da fonte não há nova versão
+    (anti-alucinação); o evento fica em relacao_normativa e na fila de revisão.
+    """
+
     def __init__(self) -> None:
         super().__init__("revocation-analyzer")
 
@@ -53,7 +63,7 @@ class RevocationAnalyzerAgent(BaseAgent):
             if num:
                 doc_lookup[num] = doc_id
 
-        # all known article node IDs
+        # all known normative node IDs
         known_art_ids: set[str] = set()
         for doc_id, doc_info in norm_data.get("byDocument", {}).items():
             for n in doc_info.get("nodes", []):
@@ -61,9 +71,8 @@ class RevocationAnalyzerAgent(BaseAgent):
                     known_art_ids.add(n["id"])
 
         edges: list[dict] = []
-        vigency_updates: list[dict] = []
         diff_log_entries: list[dict] = []
-        version_nodes: list[dict] = []
+        detections: list[dict] = []  # p/ gravação na base estruturada
 
         for doc in documents:
             doc_id = doc["documentId"]
@@ -74,8 +83,9 @@ class RevocationAnalyzerAgent(BaseAgent):
             text = parsed_path.read_text(encoding="utf-8")
             dataVigor = doc.get("dataVigor") or doc.get("dataPublicacao") or date.today().isoformat()
 
-            # Scan sentences for revocation patterns
-            sentences = re.split(r'(?<=[.;])\s+', text)
+            # Scan sentences for revocation patterns. O split exige letra
+            # maiúscula/§ à frente para não quebrar em "art. 4", "nº 42." etc.
+            sentences = re.split(r'(?<=[.;])\s+(?=[A-ZÀ-Ú§])', text)
             for sentence in sentences:
                 is_express = any(p.search(sentence) for p in REVOGA_EXPRESSAMENTE_PATTERNS)
                 is_partial = not is_express and any(p.search(sentence) for p in REVOGA_PARCIALMENTE_PATTERNS)
@@ -88,35 +98,43 @@ class RevocationAnalyzerAgent(BaseAgent):
                 has_anaphora = bool(ANAFORA_RE.search(sentence))
                 needs_review = has_exception or has_anaphora
 
-                # Determine edge type
                 if is_express:
                     etype = EdgeType.REVOGA_EXPRESSAMENTE
-                    new_status = VigencyStatus.REVOGADO
                     change_type = "revoke"
                 elif is_suspend:
                     etype = EdgeType.SUSPENDE
-                    new_status = VigencyStatus.SUSPENSO
                     change_type = "suspend"
                 else:
                     etype = EdgeType.ALTERA
-                    new_status = VigencyStatus.ALTERADO
                     change_type = "alter"
 
-                # Extract referenced articles
-                for ref_match in CROSS_REF_RE.finditer(sentence):
+                # Extract referenced articles — sem o cabeçalho do próprio
+                # artigo ("Art. 2º Fica revogado..."), que não é alvo
+                scan_sentence = re.sub(
+                    r"^Art\.\s*\d+(?:-[A-Z])?\s*[º°]?\.?\s*", "", sentence
+                )
+                for ref_match in CROSS_REF_RE.finditer(scan_sentence):
                     art_num = ref_match.group(1)
                     ref_doc_num = ref_match.group(2)
                     if not art_num:
                         continue
 
                     target_doc_id = doc_lookup.get(ref_doc_num, doc_id) if ref_doc_num else doc_id
-                    target_art_id = artigo_id(target_doc_id, art_num)
+                    try:
+                        target_canon = canon_artigo(art_num)
+                    except ValueError:
+                        continue
+                    target_art_id = disp_node_id(target_doc_id, target_canon)
 
                     # source: find enclosing article
                     art_before = text[: text.find(sentence)].rfind("Art.")
                     src_art_match = re.search(r"Art\.\s*(\d+(?:-[A-Z])?)", text[max(0, art_before) : art_before + 30])
-                    src_art_num = src_art_match.group(1) if src_art_match else "disposicoes-finais"
-                    src_art_id = artigo_id(doc_id, src_art_num)
+                    src_art_num = src_art_match.group(1) if src_art_match else None
+                    src_canon = canon_artigo(src_art_num) if src_art_num else None
+                    src_art_id = (
+                        disp_node_id(doc_id, src_canon) if src_canon
+                        else disp_node_id(doc_id, "disposicoesfinais")
+                    )
 
                     eid = edge_id(src_art_id, etype.value, target_art_id)
                     is_external = target_art_id not in known_art_ids
@@ -137,17 +155,9 @@ class RevocationAnalyzerAgent(BaseAgent):
                         "stale": False,
                     })
 
-                    if not is_external:
-                        vigency_updates.append({
-                            "nodeId": target_art_id,
-                            "newStatus": new_status.value,
-                            "edgeId": eid,
-                            "dataEfeito": dataVigor,
-                        })
-
                     diff_log_entries.append({
                         "data": dataVigor,
-                        "normaOrigem": norma_id(doc_id),
+                        "normaOrigem": f"norma:{doc_id}",
                         "tipo": change_type,
                         "dispositivo": target_art_id,
                         "descricao": sentence[:200],
@@ -155,39 +165,110 @@ class RevocationAnalyzerAgent(BaseAgent):
                         "nosAfetados": [target_art_id, src_art_id],
                     })
 
-                    # For partial revocation: create version node
-                    if etype == EdgeType.ALTERA and not is_external:
-                        ver_id = versao_id(target_art_id, 1)
-                        version_nodes.append({
-                            "id": ver_id,
-                            "sourceNodeId": target_art_id,
-                            "normaAlteracao": norma_id(doc_id),
-                            "dataAlteracao": dataVigor,
-                            "sentence": sentence[:300],
+                    if not is_external and not needs_review:
+                        detections.append({
+                            "etype": etype,
+                            "origem_doc": doc_id,
+                            "origem_canon": src_canon,
+                            "destino_doc": target_doc_id,
+                            "destino_canon": target_canon,
+                            "data_efeito": dataVigor,
+                            "evidencia": sentence[:300],
                         })
-                        # SUCEDE edge: new version succeeds old
-                        sucede_eid = edge_id(target_art_id, EdgeType.SUCEDE.value, ver_id)
-                        edges.append({
-                            "id": sucede_eid,
-                            "source": target_art_id,
-                            "target": ver_id,
-                            "type": EdgeType.SUCEDE.value,
-                            "weight": EDGE_DEFAULT_WEIGHTS[EdgeType.SUCEDE],
-                            "direction": "forward",
-                            "implicit": False,
-                            "review_required": False,
-                            "description": f"Versão histórica criada por {doc_id}",
-                        })
+
+        db_stats = self._gravar_na_base(intermediate_dir, detections)
 
         output = {
             "generatedAt": datetime.now().isoformat(),
             "edges": edges,
-            "vigencyUpdates": vigency_updates,
             "diffLogEntries": diff_log_entries,
-            "versionNodes": version_nodes,
+            "dbStats": db_stats,
         }
         self._save_json(intermediate_dir / "revocation_analyzer.json", output)
         console.print(
             f"[green]✓[/green] revocation-analyzer: {len(edges)} edges, "
-            f"{len(vigency_updates)} vigency updates, {len(diff_log_entries)} diff entries"
+            f"{len(diff_log_entries)} diff entries, db={db_stats}"
         )
+
+    # ── Gravação na base estruturada ─────────────────────────────────────
+    def _gravar_na_base(self, intermediate_dir: Path, detections: list[dict]) -> dict:
+        from db.legislacao import legislacao_enabled
+
+        stats = {"revogacoes": 0, "relacoes": 0, "fila": 0, "enabled": legislacao_enabled()}
+        if not legislacao_enabled() or not detections:
+            return stats
+
+        loader_path = intermediate_dir / "legislation_loader.json"
+        if not loader_path.exists():
+            console.print("[yellow]⚠[/yellow] legislation_loader.json ausente — gravação pulada")
+            return stats
+        normas = self._load_json(loader_path).get("normas", {})
+
+        from db.legislacao import get_conn
+
+        detections.sort(key=lambda d: d["data_efeito"])
+        with get_conn() as conn:
+            for det in detections:
+                origem = normas.get(det["origem_doc"], {}).get("norma_id")
+                destino = normas.get(det["destino_doc"], {}).get("norma_id")
+                if origem is None or destino is None:
+                    continue
+                disp_row = conn.execute(
+                    "SELECT id_dispositivo FROM dispositivo "
+                    "WHERE id_norma = %s AND id_canonico = %s",
+                    (destino, det["destino_canon"]),
+                ).fetchone()
+                if disp_row is None:
+                    stats["fila"] += 1
+                    continue
+                disp_id = disp_row[0]
+                origem_disp = None
+                if det["origem_canon"]:
+                    row = conn.execute(
+                        "SELECT id_dispositivo FROM dispositivo "
+                        "WHERE id_norma = %s AND id_canonico = %s",
+                        (origem, det["origem_canon"]),
+                    ).fetchone()
+                    origem_disp = row[0] if row else None
+
+                if det["etype"] == EdgeType.REVOGA_EXPRESSAMENTE:
+                    ja_revogado = conn.execute(
+                        "SELECT 1 FROM dispositivo_versao WHERE id_dispositivo = %s "
+                        "AND evento = 'revogacao'", (disp_id,),
+                    ).fetchone()
+                    if ja_revogado:
+                        continue
+                    try:
+                        conn.execute(
+                            "SELECT fn_registrar_revogacao(%s,%s,%s,TRUE,%s)",
+                            (disp_id, origem, det["data_efeito"], origem_disp),
+                        )
+                        conn.commit()
+                        stats["revogacoes"] += 1
+                    except Exception as e:
+                        conn.rollback()
+                        console.print(f"[yellow]⚠[/yellow] revogação não aplicada: {str(e)[:120]}")
+                        stats["fila"] += 1
+                else:
+                    # ALTERA sem a nova redação / SUSPENDE: só o vínculo — a
+                    # versão de texto exige a redação oficial (fila manual)
+                    tipo_rel = _RELACAO_POR_EDGE[det["etype"]]
+                    dup = conn.execute(
+                        "SELECT 1 FROM relacao_normativa WHERE id_norma_origem = %s "
+                        "AND id_norma_destino = %s AND id_dispositivo_destino = %s "
+                        "AND tipo_relacao = %s AND data_efeito = %s",
+                        (origem, destino, disp_id, tipo_rel, det["data_efeito"]),
+                    ).fetchone()
+                    if dup:
+                        continue
+                    conn.execute(
+                        "INSERT INTO relacao_normativa (id_norma_origem, "
+                        "id_dispositivo_origem, tipo_relacao, id_norma_destino, "
+                        "id_dispositivo_destino, data_efeito, observacao) "
+                        "VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                        (origem, origem_disp, tipo_rel, destino, disp_id,
+                         det["data_efeito"], det["evidencia"]),
+                    )
+                    conn.commit()
+                    stats["relacoes"] += 1
+        return stats

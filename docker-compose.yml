@@ -28,8 +28,34 @@ services:
       - ./intermediate:/app/intermediate
       - ./data:/app/data
     env_file: .env
+    environment:
+      LEGISLACAO_DATABASE_URL: postgresql://amanuense:amanuense@postgres:5432/legislacao
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - vps-proxy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: amanuense-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: legislacao
+      POSTGRES_USER: amanuense
+      POSTGRES_PASSWORD: amanuense
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amanuense -d legislacao"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - vps-proxy
+
+volumes:
+  pgdata:
 
 networks:
   vps-proxy:
