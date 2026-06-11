@@ -16,6 +16,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "rich>=13.0",
     "tiktoken>=0.7",
+    "psycopg[binary]>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +37,7 @@ api = [
 amanuense = "pipeline.run:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pipeline"]
+packages = ["pipeline", "db"]
 
 [build-system]
 requires = ["hatchling"]

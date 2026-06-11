@@ -124,6 +124,25 @@ def _run_agent(name: str, intermediate_dir: Path) -> None:
 
 
 @cli.command()
+@click.option("--with-demo", is_flag=True, help="Aplica também o seed de demonstração (LGPD)")
+def initdb(with_demo: bool) -> None:
+    """Inicializa a base de legislação estruturada (PostgreSQL)."""
+    import sys
+    from db.legislacao import database_url, init_legislacao_db, legislacao_enabled
+
+    if not legislacao_enabled():
+        console.print("[red]ERROR:[/red] LEGISLACAO_DATABASE_URL não definida (ver .env.example)")
+        sys.exit(1)
+    console.print(f"[bold blue]initdb[/bold blue] {database_url()}")
+    applied = init_legislacao_db(with_demo=with_demo)
+    if applied:
+        for f in applied:
+            console.print(f"[green]✓[/green] aplicado: db/sql/{f}")
+    else:
+        console.print("[yellow]↷[/yellow] nada a aplicar (schema já inicializado)")
+
+
+@cli.command()
 @click.argument("graph_path", default="output/knowledge-graph.json")
 def validate(graph_path: str) -> None:
     """Validate a knowledge-graph.json file."""
