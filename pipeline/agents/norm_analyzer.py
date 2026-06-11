@@ -1,14 +1,12 @@
 from __future__ import annotations
-import json
 from datetime import date, datetime
 from pathlib import Path
 from .base import BaseAgent, load_prompt, console
 from ..parsers.structure_parser import parse_document
 from ..schemas import (
     GraphNode, NodeType, NormativeLayer, NormaMeta, VigenciaMeta, VigencyStatus,
-    LAYER_LEVELS,
 )
-from ..utils.id_factory import norma_id, artigo_id, inciso_id, paragrafo_id
+from ..utils.id_factory import norma_id, artigo_id, inciso_id
 from ..utils.llm_helpers import parse_json_response
 
 _LAYER_FROM_TYPE: dict[str, NormativeLayer] = {
@@ -38,12 +36,38 @@ class NormAnalyzerAgent(BaseAgent):
         manifest = self._load_json(manifest_path)
         documents = manifest.get("documents", [])
 
-        all_nodes: list[dict] = []
-        corpus_texts: dict[str, dict] = {}
+        # Load previous output for incremental processing
+        output_path = intermediate_dir / "norm_analyzer.json"
+        corpus_texts_path = intermediate_dir / "corpus_texts_builder.json"
+        existing_output = self._load_json(output_path) if output_path.exists() else None
+        existing_texts = (
+            self._load_json(corpus_texts_path)["texts"]
+            if corpus_texts_path.exists()
+            else {}
+        )
+
+        # processed_doc_ids: {doc_id -> fileHash} from previous run
+        processed_hashes: dict[str, str] = {}
         by_document: dict[str, dict] = {}
+        corpus_texts: dict[str, dict] = dict(existing_texts)
+        if existing_output:
+            processed_hashes = existing_output.get("processedDocIds", {})
+            by_document = existing_output.get("byDocument", {})
+
+        # Current file hashes from manifest
+        current_hashes: dict[str, str] = {
+            d["documentId"]: d.get("fileHash", "") for d in documents
+        }
 
         for doc_meta in documents:
             doc_id = doc_meta["documentId"]
+            current_hash = current_hashes.get(doc_id, "")
+
+            # Skip documents already processed with the same file hash
+            if processed_hashes.get(doc_id) == current_hash and current_hash:
+                console.print(f"[dim]  {doc_id}: unchanged, reusing cached result[/dim]")
+                continue
+
             parsed_path = Path(corpus_dir.parent) / doc_meta["parsedPath"]
 
             if not parsed_path.exists():
@@ -170,18 +194,23 @@ class NormAnalyzerAgent(BaseAgent):
                     )
                     doc_nodes.append(inc_node.model_dump(mode="json"))
 
-            all_nodes.extend(doc_nodes)
             by_document[doc_id] = {
                 "nodes": doc_nodes,
                 "artCount": len(parsed_doc.artigos),
             }
+            # Update processed hash for this document
+            processed_hashes[doc_id] = current_hash
             console.print(f"[green]✓[/green] {doc_id}: {len(parsed_doc.artigos)} artigos")
+
+        # Reconstruct all_nodes from merged by_document (includes previously cached docs)
+        all_nodes = [n for doc_info in by_document.values() for n in doc_info.get("nodes", [])]
 
         output = {
             "generatedAt": datetime.now().isoformat(),
             "byDocument": by_document,
             "allNodeIds": [n["id"] for n in all_nodes],
             "totalNodes": len(all_nodes),
+            "processedDocIds": processed_hashes,
         }
         self._save_json(intermediate_dir / "norm_analyzer.json", output)
 

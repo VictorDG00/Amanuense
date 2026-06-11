@@ -52,6 +52,12 @@ def versao_id(node_id: str, v: int) -> str:
     return f"{node_id}:v{v}"
 
 
+def doc_id_from_node(node_id: str) -> str:
+    """Extract the doc_id from a node ID (e.g. 'art:resolucao-bcb:3' → 'resolucao-bcb')."""
+    parts = node_id.split(":", 2)
+    return parts[1] if len(parts) >= 2 else ""
+
+
 def edge_id(source: str, edge_type: str, target: str) -> str:
     raw = f"{source}--{edge_type}--{target}"
     if len(raw) <= 120:

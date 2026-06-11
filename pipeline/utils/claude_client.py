@@ -12,7 +12,7 @@ _PRICE_OUTPUT = 1.10 / 1_000_000
 
 
 class LLMClient:
-    def __init__(self) -> None:
+    def __init__(self, use_cache: bool = True) -> None:
         self.client = OpenAI(
             api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
             base_url=DEEPSEEK_BASE_URL,
@@ -22,6 +22,14 @@ class LLMClient:
         self._total_input_tokens = 0
         self._total_output_tokens = 0
         self._total_cached_tokens = 0
+        self._cache_hits = 0
+
+        self._cache = None
+        cache_enabled = use_cache and os.environ.get("AMANUENSE_LLM_CACHE", "1") != "0"
+        if cache_enabled:
+            from .llm_cache import LLMCache
+            ttl_days = int(os.environ.get("AMANUENSE_CACHE_TTL_DAYS", "30"))
+            self._cache = LLMCache(ttl_days=ttl_days)
 
     @property
     def total_cost_usd(self) -> float:
@@ -33,6 +41,12 @@ class LLMClient:
         )
 
     def call(self, system: str, user: str, max_retries: int = 3) -> str:
+        if self._cache is not None:
+            cached = self._cache.get(system, user)
+            if cached is not None:
+                self._cache_hits += 1
+                return cached
+
         last_error: Exception | None = None
         for attempt in range(max_retries):
             try:
@@ -49,9 +63,12 @@ class LLMClient:
                     self._total_input_tokens += usage.prompt_tokens
                     self._total_output_tokens += usage.completion_tokens
                     # DeepSeek reporta cache hits em prompt_cache_hit_tokens
-                    cached = getattr(usage, "prompt_cache_hit_tokens", 0) or 0
-                    self._total_cached_tokens += cached
-                return response.choices[0].message.content or ""
+                    cached_tokens = getattr(usage, "prompt_cache_hit_tokens", 0) or 0
+                    self._total_cached_tokens += cached_tokens
+                result = response.choices[0].message.content or ""
+                if self._cache is not None:
+                    self._cache.set(system, user, result)
+                return result
             except Exception as e:
                 last_error = e
                 if attempt < max_retries - 1:
