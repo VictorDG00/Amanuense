@@ -6,7 +6,7 @@ Usage: python scripts/check_vigency.py [output/vigency-index.json]
 """
 import json
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 
@@ -37,8 +37,9 @@ def main() -> int:
 
         if data_fim:
             fim = date.fromisoformat(data_fim)
+            # vigência é [inicio, fim): em days_left == 0 a redação já não vige
             days_left = (fim - today).days
-            if 0 <= days_left <= EXPIRY_WARN_DAYS:
+            if 0 < days_left <= EXPIRY_WARN_DAYS:
                 warnings.append(f"EXPIRING {node_id} — expires {fim} ({days_left} days)")
 
     if warnings:

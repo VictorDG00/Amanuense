@@ -9,6 +9,9 @@ class NodeType(str, Enum):
     ARTIGO = "artigo"
     INCISO = "inciso"
     PARAGRAFO = "paragrafo"
+    ALINEA = "alinea"
+    ITEM = "item"
+    SUBITEM = "subitem"
     DEFINICAO = "definicao"
     SANCAO = "sancao"
     INSTITUTO = "instituto"
@@ -24,7 +27,8 @@ class NodeType(str, Enum):
 
 NORMATIVE_TYPES = {
     NodeType.NORMA, NodeType.ARTIGO, NodeType.INCISO,
-    NodeType.PARAGRAFO, NodeType.DEFINICAO, NodeType.SANCAO,
+    NodeType.PARAGRAFO, NodeType.ALINEA, NodeType.ITEM,
+    NodeType.SUBITEM, NodeType.DEFINICAO, NodeType.SANCAO,
 }
 
 
@@ -87,6 +91,7 @@ class GraphNode(BaseModel):
     normativeLayer: Optional[NormativeLayer] = None
     sourceDocument: Optional[str] = None
     articleNumber: Optional[str] = None
+    idCanonico: Optional[str] = None  # chave de citação na base estruturada
     vigenciaMeta: Optional[VigenciaMeta] = None
     normaMeta: Optional[NormaMeta] = None
     review_required: bool = False

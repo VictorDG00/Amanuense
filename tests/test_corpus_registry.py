@@ -1,4 +1,3 @@
-import pytest
 from pipeline.corpus_registry import detect_metadata, load_registry, save_registry
 
 

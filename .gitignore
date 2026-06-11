@@ -20,3 +20,4 @@ venv/
 *.pem
 *.key
 data/
+.cache/

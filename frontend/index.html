@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three-spritetext@1"></script>
+<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1"></script>
 </head>
 <body>
 
@@ -140,7 +142,32 @@
 
   <!-- Graph View -->
   <div id="graph-view" class="view" style="flex-direction:row">
-    <div id="graph-canvas"></div>
+    <div id="graph-stage">
+      <div id="space-bg" aria-hidden="true">
+        <div class="stars stars-1"></div>
+        <div class="stars stars-2"></div>
+        <div class="stars stars-3"></div>
+        <div class="nebula"></div>
+      </div>
+      <div id="graph-canvas"></div>
+
+      <div id="graph-hud-top" class="hud-panel">
+        <div class="hud-eyebrow">Amanuense · Exploração Imersiva</div>
+        <div class="hud-title">Grafo de Correlações Normativas</div>
+        <div id="hud-stats" class="hud-stats"></div>
+      </div>
+
+      <div id="graph-legend" class="hud-panel"></div>
+
+      <div id="graph-controls" class="hud-panel">
+        <button id="ctrl-orbit" class="hud-btn" title="Câmera orbital cinematográfica">⟳ Órbita</button>
+        <button id="ctrl-fit" class="hud-btn" title="Enquadrar grafo inteiro">⊕ Enquadrar</button>
+        <button id="ctrl-mode" class="hud-btn" title="Alternar entre visualização 3D e 2D">◳ 2D</button>
+        <button id="ctrl-fullscreen" class="hud-btn" title="Modo imersivo em tela cheia">⛶ Imersivo</button>
+      </div>
+
+      <div id="graph-hint">arraste para orbitar · role para aproximar · clique em um nó para explorar</div>
+    </div>
     <aside id="node-panel">
       <div id="node-panel-header">
         <button id="panel-close-btn" title="Fechar">✕</button>
@@ -213,6 +240,6 @@
   <button id="toast-close" class="toast-close">✕</button>
 </div>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

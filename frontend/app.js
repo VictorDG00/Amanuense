@@ -14,7 +14,18 @@ const state = {
   tourIndex: 0,
   tourStepIndex: 0,
   highlightedNodes: new Set(),
+  // 3D immersive mode
+  graphMode: "3d",
+  graph3d: null,
+  adjacency: new Map(),
+  hoverNode: null,
+  hoverLink: null,
+  selNeighbors: new Set(),
+  autoOrbit: false,
 };
+
+const has3D = () => typeof ForceGraph3D !== "undefined";
+const LABELED_TYPES = new Set(["norma", "papel", "entidade"]);
 
 const $  = (id) => document.getElementById(id);
 const $q = (sel) => document.querySelector(sel);
@@ -47,6 +58,7 @@ async function init() {
   } catch (_) {}
 
   hideLoading();
+  state.graphMode = (has3D() && localStorage.getItem("amanuense-graph-mode") !== "2d") ? "3d" : "2d";
   switchView("graph");
   populateSidebar();
   renderGraph();
@@ -337,12 +349,282 @@ function getFilteredData() {
 }
 
 function renderGraph() {
+  if (state.graphMode === "3d" && has3D()) renderGraph3D();
+  else renderGraph2D();
+  syncGraphModeUI();
+}
+
+// ── 3D Immersive Graph (WebGL / three.js via 3d-force-graph) ─────────────────
+function renderGraph3D() {
+  const stage = $("graph-stage");
+  stage.classList.remove("mode-2d");
+  state.simulation = null;
+
+  const data = getFilteredData();
+  buildAdjacency(data);
+  updateHudStats(data);
+  renderLegend(data);
+
+  if (!state.graph3d) initGraph3D();
+  state.graph3d.graphData(data);
+}
+
+function initGraph3D() {
+  const canvas = $("graph-canvas");
+  canvas.innerHTML = "";
+
+  let g;
+  try {
+    g = ForceGraph3D({ controlType: "orbit" })(canvas);      // factory API (kapsule)
+  } catch (_) {
+    g = new ForceGraph3D(canvas, { controlType: "orbit" });  // class API (>= v1.73)
+  }
+  state.graph3d = g;
+
+  g.backgroundColor("rgba(0,0,0,0)")
+    .width(canvas.clientWidth || 900)
+    .height(canvas.clientHeight || 600)
+    .showNavInfo(false)
+    .nodeVal(nodeVal3D)
+    .nodeResolution(16)
+    .nodeOpacity(0.92)
+    .nodeColor(nodeColor3D)
+    .nodeLabel(n => `<div class="g3d-tip"><b>${escapeHtml(n.label || n.id)}</b><br><span>${n.type} · ${n.status || ""}</span></div>`)
+    .linkColor(linkColor3D)
+    .linkOpacity(0.32)
+    .linkWidth(linkWidth3D)
+    .linkCurvature(l => l.implicit ? 0.25 : 0)
+    .linkLabel(l => `<div class="g3d-tip"><b>${escapeHtml(l.type)}</b><br><span>peso ${(l.weight ?? 0).toFixed(2)}${l.implicit ? " · implícita" : ""}</span></div>`)
+    .linkDirectionalArrowLength(3.5)
+    .linkDirectionalArrowRelPos(1)
+    .linkDirectionalParticles(linkParticles3D)
+    .linkDirectionalParticleWidth(1.5)
+    .linkDirectionalParticleSpeed(l => 0.002 + (l.weight ?? 0.5) * 0.004)
+    .onNodeClick(n => { selectNode(n.id); })
+    .onNodeHover(n => {
+      canvas.style.cursor = n ? "pointer" : null;
+      state.hoverNode = n || null;
+      refresh3DStyles();
+    })
+    .onLinkHover(l => {
+      state.hoverLink = l || null;
+      refresh3DStyles();
+    })
+    .onBackgroundClick(() => deselectNode());
+
+  // Floating text labels for the most important node types
+  if (typeof SpriteText !== "undefined") {
+    g.nodeThreeObjectExtend(true).nodeThreeObject(n => {
+      if (!LABELED_TYPES.has(n.type)) return undefined;
+      const sprite = new SpriteText((n.label || n.id).substring(0, 28), 4.5, "rgba(226,235,246,0.95)");
+      sprite.fontFace = "Georgia";
+      sprite.backgroundColor = "rgba(8,16,32,0.45)";
+      sprite.padding = 1.5;
+      sprite.borderRadius = 2;
+      sprite.position.set(0, -(4 * Math.cbrt(nodeVal3D(n)) + 5), 0);
+      return sprite;
+    });
+  }
+
+  const charge = g.d3Force("charge");
+  if (charge) charge.strength(-170);
+
+  const controls = g.controls();
+  if (controls) {
+    controls.autoRotateSpeed = 0.55;
+    controls.autoRotate = state.autoOrbit;
+  }
+
+  // Cinematic fly-in on first render
+  g.cameraPosition({ x: 0, y: 0, z: 1100 });
+  setTimeout(() => { if (state.graph3d === g) g.zoomToFit(1800, 90); }, 900);
+}
+
+function destroyGraph3D() {
+  if (state.graph3d) {
+    try { state.graph3d._destructor(); } catch (_) {}
+    state.graph3d = null;
+  }
+  state.hoverNode = null;
+  state.hoverLink = null;
+  $("graph-canvas").innerHTML = "";
+}
+
+const nodeVal3D = (n) => {
+  if (n.type === "norma") return 14;
+  if (n.type === "papel" || n.type === "entidade") return 8;
+  if (n.type === "artigo") return 3;
+  return 1.5;
+};
+
+function nodeColor3D(n) {
+  const base = n.status === "revogado" ? "#67738a"
+             : n.status === "suspenso" ? "#8d97a5"
+             : (n.color || "#7f8c9b");
+  if (state.highlightedNodes.has(n.id)) return "#ffd75e";
+  if (n.id === state.selectedNodeId) return "#ffd75e";
+  if (state.hoverNode) {
+    if (n.id === state.hoverNode.id) return "#ffffff";
+    if (state.adjacency.get(state.hoverNode.id)?.has(n.id)) return blendColor(base, "#ffffff", 0.3);
+    return blendColor(base, "#0b1526", 0.7);
+  }
+  if (state.selectedNodeId) {
+    if (state.selNeighbors.has(n.id)) return blendColor(base, "#ffffff", 0.2);
+    return blendColor(base, "#0b1526", 0.6);
+  }
+  return base;
+}
+
+function isHoverLink(l) {
+  if (state.hoverLink === l) return true;
+  const s = l.source?.id ?? l.source, t = l.target?.id ?? l.target;
+  if (state.hoverNode && (s === state.hoverNode.id || t === state.hoverNode.id)) return true;
+  if (state.selectedNodeId && (s === state.selectedNodeId || t === state.selectedNodeId)) return true;
+  return false;
+}
+
+function linkColor3D(l) {
+  if (isHoverLink(l)) return "#ffd75e";
+  const base = l.color || "#5577aa";
+  return l.implicit ? blendColor(base, "#0b1526", 0.35) : base;
+}
+
+const linkWidth3D = (l) => isHoverLink(l) ? 1.8 : 0.4 + (l.weight ?? 0.5) * 1.0;
+const linkParticles3D = (l) => isHoverLink(l) ? 4 : ((l.weight ?? 0) >= 0.65 ? 2 : 0);
+
+function refresh3DStyles() {
+  const g = state.graph3d;
+  if (!g) return;
+  g.nodeColor(g.nodeColor());
+  g.linkColor(g.linkColor());
+  g.linkWidth(g.linkWidth());
+  g.linkDirectionalParticles(g.linkDirectionalParticles());
+}
+
+function buildAdjacency(data) {
+  const adj = new Map();
+  data.nodes.forEach(n => adj.set(n.id, new Set()));
+  data.links.forEach(l => {
+    const s = l.source?.id ?? l.source, t = l.target?.id ?? l.target;
+    adj.get(s)?.add(t);
+    adj.get(t)?.add(s);
+  });
+  state.adjacency = adj;
+}
+
+function focusNode3D(node, ms = 1400) {
+  const g = state.graph3d;
+  if (!g || node.x === undefined) return;
+  const dist = 130;
+  const r = Math.hypot(node.x, node.y, node.z) || 1;
+  const k = 1 + dist / r;
+  g.cameraPosition({ x: node.x * k, y: node.y * k, z: node.z * k }, node, ms);
+}
+
+function zoomToHighlights(ms = 1400) {
+  const g = state.graph3d;
+  if (!g) return;
+  if (state.highlightedNodes.size) g.zoomToFit(ms, 90, n => state.highlightedNodes.has(n.id));
+  else g.zoomToFit(ms, 80);
+}
+
+function resize3D() {
+  const g = state.graph3d;
+  if (!g) return;
+  const canvas = $("graph-canvas");
+  g.width(canvas.clientWidth).height(canvas.clientHeight);
+}
+
+// Re-applies tour/step highlights on whichever renderer is active
+function applyHighlights() {
+  if (state.graphMode === "3d" && state.graph3d) {
+    refresh3DStyles();
+    if (state.currentView === "graph") zoomToHighlights();
+  } else if (state.currentView === "graph") {
+    renderGraph2D();
+  }
+}
+
+function setGraphMode(mode) {
+  if (mode === state.graphMode) return;
+  if (mode === "3d" && !has3D()) return;
+  state.graphMode = mode;
+  try { localStorage.setItem("amanuense-graph-mode", mode); } catch (_) {}
+  if (mode === "2d") destroyGraph3D();
+  state.simulation = null;
+  renderGraph();
+}
+
+function syncGraphModeUI() {
+  const is3d = state.graphMode === "3d";
+  const modeBtn = $("ctrl-mode");
+  if (modeBtn) modeBtn.textContent = is3d ? "◳ 2D" : "⬡ 3D";
+  const orbitBtn = $("ctrl-orbit");
+  if (orbitBtn) {
+    orbitBtn.style.display = is3d ? "" : "none";
+    orbitBtn.classList.toggle("active", state.autoOrbit);
+  }
+  if (modeBtn && !has3D()) modeBtn.style.display = "none";
+  const hint = $("graph-hint");
+  if (hint) hint.textContent = is3d
+    ? "arraste para orbitar · role para aproximar · clique em um nó para explorar"
+    : "arraste os nós · role para zoom · clique em um nó para detalhes";
+}
+
+function updateHudStats(data) {
+  const el = $("hud-stats");
+  if (el) el.textContent = `${data.nodes.length} nós · ${data.links.length} correlações`;
+}
+
+function renderLegend(data) {
+  const el = $("graph-legend");
+  if (!el) return;
+  const byType = new Map();
+  data.nodes.forEach(n => {
+    const e = byType.get(n.type) || { color: n.color || "#7f8c9b", count: 0 };
+    e.count++;
+    byType.set(n.type, e);
+  });
+  const rows = [...byType.entries()].sort((a, b) => b[1].count - a[1].count).map(([type, e]) => `
+    <div class="legend-row">
+      <span class="legend-dot" style="color:${e.color};background:${e.color}"></span>
+      <span class="legend-name">${escapeHtml(type)}</span>
+      <span class="legend-count">${e.count}</span>
+    </div>
+  `).join("");
+  el.innerHTML = `<div class="hud-eyebrow">Legenda</div>${rows}
+    <div class="legend-note">arestas curvas/tracejadas = implícitas</div>`;
+}
+
+function blendColor(c1, c2, t) {
+  const p = (c) => {
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c)) return null;
+    let h = c.slice(1);
+    if (h.length === 3) h = h.split("").map(x => x + x).join("");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  };
+  const a = p(c1), b = p(c2);
+  if (!a || !b) return c1;
+  const m = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  return `rgb(${m[0]},${m[1]},${m[2]})`;
+}
+
+// ── 2D Graph (D3 fallback) ────────────────────────────────────────────────────
+function renderGraph2D() {
+  const stage = $("graph-stage");
+  if (stage) stage.classList.add("mode-2d");
+  destroyGraph3D();
+
   const canvas = $("graph-canvas");
   canvas.innerHTML = "";
   const W = canvas.clientWidth || 900;
   const H = canvas.clientHeight || 600;
 
-  const { nodes, links } = getFilteredData();
+  const data = getFilteredData();
+  updateHudStats(data);
+  renderLegend(data);
+
+  const { nodes, links } = data;
   if (nodes.length === 0) return;
 
   const svg = d3.select(canvas).append("svg")
@@ -449,6 +731,13 @@ function selectNode(nodeId) {
   const node = state.graph.nodes.find(n => n.id === nodeId);
   if (!node) return;
 
+  state.selNeighbors = new Set(state.adjacency.get(nodeId) || []);
+  if (state.graphMode === "3d" && state.graph3d) {
+    const obj = state.graph3d.graphData().nodes.find(n => n.id === nodeId);
+    if (obj) focusNode3D(obj);
+    refresh3DStyles();
+  }
+
   $("node-panel-title").textContent = node.label || node.id;
   $("node-panel-type").textContent = node.type.toUpperCase() + " · " + (node.status || "");
   $("node-panel-type").className = "status-" + (node.status || "vigente");
@@ -512,7 +801,9 @@ function edgeHtml(edge, dir) {
 
 function deselectNode() {
   state.selectedNodeId = null;
+  state.selNeighbors = new Set();
   $("node-panel").classList.remove("open");
+  refresh3DStyles();
 }
 
 // ── Tooltips ──────────────────────────────────────────────────────────────────
@@ -676,7 +967,7 @@ function renderTourStep(tourIdx, stepIdx) {
   if (!step) return;
 
   state.highlightedNodes = new Set(step.nodeIds || []);
-  if (state.currentView === "graph") renderGraph();
+  applyHighlights();
 
   const nodeChips = (step.nodeIds || []).map(id => {
     const n = state.graph?.nodes.find(x => x.id === id);
@@ -752,7 +1043,17 @@ function switchView(viewName) {
   const btnEl = $q(`.sidebar-btn[data-view="${viewName}"]`);
   if (btnEl) btnEl.classList.add("active");
   if (viewName === "graph" && state.graph) {
-    setTimeout(() => { if (!state.simulation) renderGraph(); }, 50);
+    setTimeout(() => {
+      if (state.graphMode === "3d" && has3D()) {
+        if (!state.graph3d) renderGraph();
+        else {
+          resize3D();
+          if (state.highlightedNodes.size) zoomToHighlights();
+        }
+      } else if (!state.simulation) {
+        renderGraph();
+      }
+    }, 50);
   }
 }
 
@@ -775,9 +1076,46 @@ function bindEvents() {
   $("role-select").addEventListener("change", (e) => renderRoleObligations(e.target.value));
   $("panel-close-btn").addEventListener("click", deselectNode);
 
+  bindHudControls();
   setupSearch();
 
-  window.addEventListener("resize", () => { if (state.currentView === "graph") renderGraph(); });
+  window.addEventListener("resize", () => {
+    if (state.currentView !== "graph") return;
+    if (state.graphMode === "3d" && state.graph3d) resize3D();
+    else renderGraph();
+  });
+}
+
+function bindHudControls() {
+  $("ctrl-orbit")?.addEventListener("click", () => {
+    state.autoOrbit = !state.autoOrbit;
+    const controls = state.graph3d?.controls();
+    if (controls) controls.autoRotate = state.autoOrbit;
+    $("ctrl-orbit").classList.toggle("active", state.autoOrbit);
+  });
+
+  $("ctrl-fit")?.addEventListener("click", () => {
+    if (state.graphMode === "3d" && state.graph3d) state.graph3d.zoomToFit(1200, 80);
+    else renderGraph();
+  });
+
+  $("ctrl-mode")?.addEventListener("click", () => {
+    setGraphMode(state.graphMode === "3d" ? "2d" : "3d");
+  });
+
+  $("ctrl-fullscreen")?.addEventListener("click", () => {
+    const view = $("graph-view");
+    if (document.fullscreenElement) document.exitFullscreen();
+    else view.requestFullscreen?.();
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    if (state.currentView !== "graph") return;
+    setTimeout(() => {
+      if (state.graphMode === "3d" && state.graph3d) resize3D();
+      else renderGraph();
+    }, 100);
+  });
 }
 
 function bindCorpusEvents() {

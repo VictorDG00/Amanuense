@@ -21,15 +21,17 @@ def _execute(run_id: str, q: queue.Queue) -> None:
         q.put(event)
 
     error_msg: str | None = None
+    # o evento final entra na fila ANTES do status terminal: quem observa o
+    # status "done"/"error" tem garantia de que o evento já está na fila
     try:
         from pipeline.run import run_pipeline_with_callback
         run_pipeline_with_callback(run_id, callback)
-        _runs[run_id]["status"] = "done"
         q.put({"type": "done"})
+        _runs[run_id]["status"] = "done"
     except Exception as e:
         error_msg = str(e)
-        _runs[run_id]["status"] = "error"
         q.put({"type": "error", "message": error_msg})
+        _runs[run_id]["status"] = "error"
     finally:
         _update_run_record(run_id, error_msg)
 
@@ -65,6 +67,14 @@ async def stream_events(run_id: str) -> AsyncGenerator[str, None]:
                 break
         except queue.Empty:
             if run["status"] in ("done", "error"):
+                # drena eventos restantes (o evento final é enfileirado antes
+                # do status terminal, então a fila já contém tudo)
+                while True:
+                    try:
+                        event = q.get_nowait()
+                    except queue.Empty:
+                        break
+                    yield f"data: {json.dumps(event)}\n\n"
                 break
             await asyncio.sleep(0.2)
             yield ": keepalive\n\n"

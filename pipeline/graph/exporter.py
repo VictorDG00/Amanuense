@@ -9,6 +9,9 @@ _NODE_COLORS: dict[str, str] = {
     NodeType.ARTIGO.value: "#2a5080",
     NodeType.INCISO.value: "#4a7aa0",
     NodeType.PARAGRAFO.value: "#6a9ab8",
+    NodeType.ALINEA.value: "#8ab4cc",
+    NodeType.ITEM.value: "#a8c8da",
+    NodeType.SUBITEM.value: "#c2d8e6",
     NodeType.DEFINICAO.value: "#1a6b3a",
     NodeType.SANCAO.value: "#8b1a1a",
     NodeType.INSTITUTO.value: "#5a3a8b",
@@ -105,27 +108,29 @@ def write_js_data(graph: KnowledgeGraph, output_dir: Path) -> None:
     (output_dir / "graph-data.js").write_text(js_content, encoding="utf-8")
 
 
-def build_corpus_texts(intermediate_dir: Path, graph: KnowledgeGraph) -> dict:
+def build_corpus_texts(
+    intermediate_dir: Path,
+    graph: KnowledgeGraph,
+    versoes_db: dict[str, dict] | None = None,
+) -> dict:
+    """Textos por nó. Com a base estruturada, as versões reais
+    (dispositivo_versao, com vigência [inicio,fim)) substituem a heurística.
+    """
     corpus_texts_path = intermediate_dir / "corpus_texts_builder.json"
-    revocation_path = intermediate_dir / "revocation_analyzer.json"
 
     texts: dict = {}
     if corpus_texts_path.exists():
         raw = json.loads(corpus_texts_path.read_text(encoding="utf-8"))
         texts = raw.get("texts", {})
 
-    # Enrich with version info from revocation analyzer
-    if revocation_path.exists():
-        rev_data = json.loads(revocation_path.read_text(encoding="utf-8"))
-        for ver_node in rev_data.get("versionNodes", []):
-            source_id = ver_node.get("sourceNodeId")
-            ver_id = ver_node.get("id")
-            if source_id and source_id in texts:
-                original_text = texts[source_id].get("textoCompleto", "")
-                texts[source_id].setdefault("versoes", {})["v1"] = {
-                    "vigencia": f"original/{ver_node.get('dataAlteracao', '')}",
-                    "textoCompleto": original_text,
-                    "nota": f"Versão anterior à alteração por {ver_node.get('normaAlteracao', '')}",
-                }
+    for node_id, versoes in (versoes_db or {}).items():
+        if node_id in texts:
+            texts[node_id]["versoes"] = versoes
+        else:
+            ultima = versoes[max(versoes, key=lambda v: int(v[1:]))]
+            texts[node_id] = {
+                "textoCompleto": ultima.get("textoCompleto", ""),
+                "versoes": versoes,
+            }
 
     return {"generatedAt": datetime.now().isoformat(), "texts": texts}

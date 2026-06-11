@@ -18,3 +18,8 @@ IMPLICIT_CONFIDENCE_THRESHOLD = 0.70
 IMPLICIT_CONFIDENCE_AUTO_APPROVE = 0.85
 MAX_IMPLICIT_EDGES_PER_ARTICLE = 5
 VIGENCY_REVIEW_STALENESS_DAYS = 90
+
+# Batch size for implication-analyzer: articles per LLM call
+# Set to 1 to use original single-article format (array response)
+# Set to 2+ to use batched format (object response keyed by art_id)
+IMPLICATION_BATCH_SIZE = 4

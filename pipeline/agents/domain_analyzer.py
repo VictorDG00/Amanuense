@@ -4,9 +4,9 @@ from pathlib import Path
 from .base import BaseAgent, load_prompt, console
 from ..parsers.bcb_patterns import DEFINICAO_RE, PRAZO_RE
 from ..schemas import (
-    GraphNode, NodeType, VigenciaMeta, VigencyStatus, EdgeType, EDGE_DEFAULT_WEIGHTS,
+    GraphNode, NodeType, EdgeType, EDGE_DEFAULT_WEIGHTS,
 )
-from ..utils.id_factory import definicao_id, papel_id, prazo_id, entidade_id, artigo_id, edge_id
+from ..utils.id_factory import definicao_id, papel_id, prazo_id, entidade_id, edge_id, doc_id_from_node
 from ..utils.llm_helpers import parse_json_response
 
 _FIXED_PAPEIS = [
@@ -57,9 +57,17 @@ class DomainAnalyzerAgent(BaseAgent):
             console.print("[red]ERROR:[/red] norm_analyzer.json required")
             return
 
-        manifest = self._load_json(manifest_path) if manifest_path.exists() else {"documents": []}
         norm_data = self._load_json(norm_path)
         corpus_texts = self._load_json(corpus_texts_path)["texts"] if corpus_texts_path.exists() else {}
+
+        # Load previous output for incremental processing
+        output_path = intermediate_dir / "domain_analyzer.json"
+        existing_output = self._load_json(output_path) if output_path.exists() else None
+
+        processed_hashes: dict[str, str] = {}
+        current_hashes: dict[str, str] = norm_data.get("processedDocIds", {})
+        if existing_output:
+            processed_hashes = existing_output.get("processedDocIds", {})
 
         vigencia_inicio = date(2020, 11, 16)
         verificacao = date.today()
@@ -67,9 +75,37 @@ class DomainAnalyzerAgent(BaseAgent):
         nodes: list[dict] = _make_fixed_nodes(vigencia_inicio, verificacao)
         edges: list[dict] = []
         seen_def_ids: set[str] = set()
+        seen_edge_ids: set[str] = set()
         prazo_counter: dict[str, int] = {}
 
+        # Restore preserved results from unchanged docs (docs removed from the
+        # corpus are not preserved, otherwise their nodes would linger forever)
+        if existing_output:
+            new_or_changed = {
+                doc_id for doc_id in current_hashes
+                if current_hashes.get(doc_id) != processed_hashes.get(doc_id)
+            }
+            for n in existing_output.get("nodes", []):
+                src_doc = n.get("sourceDoc", "")
+                if src_doc and src_doc in current_hashes and src_doc not in new_or_changed:
+                    nodes.append(n)
+                    seen_def_ids.add(n["id"])
+            for e in existing_output.get("edges", []):
+                source_doc = doc_id_from_node(e.get("source", ""))
+                if source_doc and source_doc in current_hashes and source_doc not in new_or_changed:
+                    edges.append(e)
+                    seen_edge_ids.add(e["id"])
+            processed_hashes = {
+                k: v for k, v in processed_hashes.items() if k in current_hashes
+            }
+        else:
+            new_or_changed = set(current_hashes)
+
         for doc_id, doc_info in norm_data.get("byDocument", {}).items():
+            if doc_id not in new_or_changed:
+                console.print(f"[dim]  {doc_id}: unchanged, reusing domain results[/dim]")
+                continue
+
             art_nodes = [n for n in doc_info.get("nodes", []) if n.get("type") == "artigo"]
 
             for art_node in art_nodes:
@@ -85,28 +121,32 @@ class DomainAnalyzerAgent(BaseAgent):
                     def_id = definicao_id(doc_id, termo)
                     if def_id not in seen_def_ids:
                         seen_def_ids.add(def_id)
-                        nodes.append(GraphNode(
+                        node_dict = GraphNode(
                             id=def_id,
                             type=NodeType.DEFINICAO,
                             name=termo,
                             summary=f"Definição legal: {termo} ({doc_id})",
                             tags=[termo.lower().replace(" ", "-")[:30], "definicao"],
-                        ).model_dump(mode="json"))
+                        ).model_dump(mode="json")
+                        node_dict["sourceDoc"] = doc_id
+                        nodes.append(node_dict)
 
                     eid = edge_id(art_id, EdgeType.DEFINE.value, def_id)
-                    edges.append({
-                        "id": eid,
-                        "source": art_id,
-                        "target": def_id,
-                        "type": EdgeType.DEFINE.value,
-                        "weight": EDGE_DEFAULT_WEIGHTS[EdgeType.DEFINE],
-                        "direction": "forward",
-                        "implicit": False,
-                        "textEvidence": m.group(0)[:200],
-                        "review_required": False,
-                        "deprecated": False,
-                        "stale": False,
-                    })
+                    if eid not in seen_edge_ids:
+                        seen_edge_ids.add(eid)
+                        edges.append({
+                            "id": eid,
+                            "source": art_id,
+                            "target": def_id,
+                            "type": EdgeType.DEFINE.value,
+                            "weight": EDGE_DEFAULT_WEIGHTS[EdgeType.DEFINE],
+                            "direction": "forward",
+                            "implicit": False,
+                            "textEvidence": m.group(0)[:200],
+                            "review_required": False,
+                            "deprecated": False,
+                            "stale": False,
+                        })
 
                 # Regex-based prazos
                 for m in PRAZO_RE.finditer(art_text):
@@ -114,15 +154,18 @@ class DomainAnalyzerAgent(BaseAgent):
                     pz_id = prazo_id(doc_id, art_num, prazo_counter[doc_id])
                     full_match = m.group(0).strip()
 
-                    nodes.append(GraphNode(
+                    pz_dict = GraphNode(
                         id=pz_id,
                         type=NodeType.PRAZO,
                         name=f"Prazo: {full_match[:50]}",
                         summary=f"Prazo normativo extraído de {art_id}: {full_match}",
                         tags=["prazo", doc_id.split("-")[0]],
-                    ).model_dump(mode="json"))
+                    ).model_dump(mode="json")
+                    pz_dict["sourceDoc"] = doc_id
+                    nodes.append(pz_dict)
 
                     eid = edge_id(art_id, EdgeType.CONDICIONA.value, pz_id)
+                    seen_edge_ids.add(eid)
                     edges.append({
                         "id": eid,
                         "source": art_id,
@@ -155,15 +198,18 @@ class DomainAnalyzerAgent(BaseAgent):
                             def_id = definicao_id(doc_id, termo)
                             if def_id not in seen_def_ids:
                                 seen_def_ids.add(def_id)
-                                nodes.append(GraphNode(
+                                llm_def_dict = GraphNode(
                                     id=def_id,
                                     type=NodeType.DEFINICAO,
                                     name=termo,
                                     summary=d.get("definicao", termo),
                                     tags=[termo.lower().replace(" ", "-")[:30], "definicao"],
-                                ).model_dump(mode="json"))
+                                ).model_dump(mode="json")
+                                llm_def_dict["sourceDoc"] = doc_id
+                                nodes.append(llm_def_dict)
                             eid = edge_id(art_id, EdgeType.DEFINE.value, def_id)
-                            if not any(e["id"] == eid for e in edges):
+                            if eid not in seen_edge_ids:
+                                seen_edge_ids.add(eid)
                                 edges.append({
                                     "id": eid,
                                     "source": art_id,
@@ -180,6 +226,8 @@ class DomainAnalyzerAgent(BaseAgent):
                     except Exception as e:
                         console.print(f"[yellow]⚠[/yellow]  domain LLM failed for {art_id}: {e}")
 
+            processed_hashes[doc_id] = current_hashes.get(doc_id, "")
+
         # deduplicate nodes by id
         seen_ids: set[str] = set()
         deduped: list[dict] = []
@@ -192,6 +240,7 @@ class DomainAnalyzerAgent(BaseAgent):
             "generatedAt": datetime.now().isoformat(),
             "nodes": deduped,
             "edges": edges,
+            "processedDocIds": processed_hashes,
         }
         self._save_json(intermediate_dir / "domain_analyzer.json", output)
         console.print(
