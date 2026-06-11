@@ -36,6 +36,7 @@ def run_pipeline_with_callback(
 
 AGENT_SEQUENCE = [
     "corpus-scanner",
+    "legislation-loader",
     "norm-analyzer",
     "hierarchy-analyzer",
     "revocation-analyzer",
@@ -87,6 +88,9 @@ def _run_agent(name: str, intermediate_dir: Path) -> None:
     if name == "corpus-scanner":
         from .agents.corpus_scanner import CorpusScannerAgent
         CorpusScannerAgent().run(intermediate_dir, CORPUS_DIR)
+    elif name == "legislation-loader":
+        from .agents.legislation_loader import LegislationLoaderAgent
+        LegislationLoaderAgent().run(intermediate_dir, CORPUS_DIR)
     elif name == "norm-analyzer":
         from .agents.norm_analyzer import NormAnalyzerAgent
         NormAnalyzerAgent().run(intermediate_dir, CORPUS_DIR)
