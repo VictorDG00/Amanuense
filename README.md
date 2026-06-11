@@ -57,19 +57,20 @@ amanuense serve --port 3000
 
 ## Sequência de agentes
 
-O pipeline executa 9 agentes em sequência. Cada um lê de `intermediate/<run-id>/` e escreve seu output lá.
+O pipeline executa 10 agentes em sequência. Cada um lê de `intermediate/<run-id>/` e escreve seu output lá.
 
 | # | Agente | O que faz | Usa LLM |
 |---|--------|-----------|---------|
 | 1 | `corpus-scanner` | Inventaria `corpus/raw/`, auto-converte PDFs para Markdown | Não |
-| 2 | `norm-analyzer` | Extrai nós do grafo (normas, artigos, incisos) e gera summaries + tags | Sim |
-| 3 | `hierarchy-analyzer` | Cria arestas de hierarquia normativa (ex: resolução regulamenta circular) | Não |
-| 4 | `revocation-analyzer` | Detecta revogações e alterações por regex nos textos | Não |
-| 5 | `implication-analyzer` | Infere relações implícitas entre artigos com score de confiança | Sim |
-| 6 | `domain-analyzer` | Extrai nós de domínio: definições legais, prazos, papéis institucionais | Sim |
-| 7 | `graph-builder` | Monta o grafo final a partir dos 5 intermediários, aplica vigência | Não |
-| 8 | `graph-reviewer` | Revisão de qualidade (interativa ou auto-approve se confiança ≥ 0.85) | Sim |
-| 9 | `tour-builder` | Cria roteiros temáticos para 4 perfis (advogado, compliance, técnico, gestor) | Sim |
+| 2 | `legislation-loader` | Gera a árvore canônica de cada norma e a carrega na base estruturada (PostgreSQL) via funções do motor de versionamento | Não |
+| 3 | `norm-analyzer` | Extrai nós do grafo da árvore canônica (normas, artigos, §§, incisos, alíneas) e gera summaries + tags | Sim |
+| 4 | `hierarchy-analyzer` | Cria arestas de hierarquia normativa (ex: resolução regulamenta circular) | Não |
+| 5 | `revocation-analyzer` | Detecta revogações e alterações por regex e as registra na base estruturada | Não |
+| 6 | `implication-analyzer` | Infere relações implícitas entre artigos com score de confiança | Sim |
+| 7 | `domain-analyzer` | Extrai nós de domínio: definições legais, prazos, papéis institucionais | Sim |
+| 8 | `graph-builder` | Monta o grafo final; vigência, textos e versões vêm da base estruturada | Não |
+| 9 | `graph-reviewer` | Revisão de qualidade (interativa ou auto-approve se confiança ≥ 0.85) | Sim |
+| 10 | `tour-builder` | Cria roteiros temáticos para 4 perfis (advogado, compliance, técnico, gestor) | Sim |
 
 Os agentes que usam LLM têm prompts de sistema em `pipeline/prompts/<agent-name>.md`.
 
@@ -99,6 +100,8 @@ pipeline/
 
 api/               # FastAPI: upload de PDFs + trigger de pipeline via HTTP
 db/                # SQLAlchemy models (CorpusDocument, PipelineRun) + migrations Alembic
+  sql/             # DDL canônico da base de legislação estruturada (PostgreSQL)
+  legislacao.py    # Conexão psycopg3 + bootstrap idempotente (amanuense initdb)
 
 frontend/          # Visualizador HTML/JS + D3.js (sem build step)
 scripts/           # parse_pdfs.py, validate_graph.py, check_vigency.py
@@ -114,10 +117,11 @@ intermediate/      # Estado entre runs (ignorado pelo git)
 
 Todos os tipos são Pydantic v2. Novos tipos sempre vão aqui, nunca inline nos agentes.
 
-- **`node.py`** — `GraphNode`, `NodeType` (13 tipos), `VigencyStatus`, `NormativeLayer`, `VigenciaMeta`, `NormaMeta`
+- **`node.py`** — `GraphNode`, `NodeType`, `VigencyStatus`, `NormativeLayer`, `VigenciaMeta`, `NormaMeta`
 - **`edge.py`** — `GraphEdge`, `EdgeType` (31 tipos de relação), `EDGE_DEFAULT_WEIGHTS`
 - **`graph.py`** — `KnowledgeGraph`, `Layer`, `TourStep`
 - **`outputs.py`** — `VigencyIndex`, `DiffLog`, `CorpusTexts`
+- **`legislacao.py`** — `NormaCanonica`, `DispositivoCanonico`, `EventoHistorico` (árvore canônica intermediária entre parsing e carga)
 
 ### Tipos de aresta (principais)
 
@@ -132,9 +136,43 @@ O grafo suporta 31 tipos de relação. Alguns exemplos:
 
 Arestas inferidas por LLM carregam um score de confiança (0.70–1.0). Arestas abaixo do threshold são marcadas `review_required = True`.
 
+## Base de legislação estruturada (PostgreSQL)
+
+Com `LEGISLACAO_DATABASE_URL` definida, as leis passam a ser armazenadas em
+uma base PostgreSQL 14+ que é a **fonte da verdade**: identidade estável de
+cada dispositivo (`id_canonico`, ex.: `art5_par2_inc3`), redações versionadas
+com vigência temporal `[inicio, fim)` sem sobreposição (EXCLUDE gist) e
+relações normativas (altera/revoga/acrescenta). O grafo é derivado dela.
+
+- DDL canônico em `db/sql/` (`01_schema.sql`, `02_versionamento.sql`) —
+  aplicado por `amanuense initdb`, **nunca** por ORM/Alembic
+- Toda mutação passa pelas funções do motor (`fn_criar_norma`,
+  `fn_inserir_dispositivo`, `fn_registrar_alteracao`,
+  `fn_registrar_revogacao`); INSERT direto nas tabelas de versão é proibido
+- Consulta temporal: `fn_consultar_dispositivo(id_norma, id_canonico, data)`
+  → vigente / revogado / inexistente na data; `fn_texto_consolidado` monta o
+  texto compilado em qualquer data
+- Anti-alucinação: todo texto vem do parsing da fonte oficial; o que o parser
+  não interpreta com confiança vai para a fila de revisão manual
+  (`legislation_loader.json` → `review_queue`), nunca é inferido
+- `amanuense initdb --with-demo` aplica `db/sql/03_demo_lgpd.sql` (exemplo
+  ilustrativo com a LGPD)
+
+```bash
+docker compose up -d postgres
+export LEGISLACAO_DATABASE_URL=postgresql://amanuense:amanuense@localhost:5432/legislacao
+amanuense initdb
+amanuense run
+```
+
+Sem a variável, o pipeline roda em **modo legado** (somente JSON, sem
+versionamento temporal).
+
 ## Vigência
 
-O `graph-builder` aplica e propaga vigência em cascata:
+Com a base estruturada habilitada, status, datas e cascata de revogação dos
+nós normativos vêm do motor de versionamento. No modo legado, o
+`graph-builder` aplica e propaga vigência em cascata:
 
 - Uma norma marcada como `revogada` propaga o status para seus artigos
 - Alterações parciais (um artigo revogado) não afetam o status da norma-mãe
@@ -150,6 +188,7 @@ O `graph-builder` aplica e propaga vigência em cascata:
 | `AMANUENSE_CORPUS_DIR` | `corpus` | Diretório do corpus |
 | `AMANUENSE_OUTPUT_DIR` | `output` | Diretório de saída |
 | `AMANUENSE_INTERMEDIATE_DIR` | `intermediate` | Estado intermediário entre runs |
+| `LEGISLACAO_DATABASE_URL` | — | PostgreSQL da base de legislação estruturada (opcional; sem ela, modo legado) |
 
 ## API HTTP (opcional)
 
