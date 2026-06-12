@@ -11,7 +11,8 @@ from pathlib import Path
 import pytest
 
 from pipeline.agents.domain_analyzer import DomainAnalyzerAgent
-from pipeline.schemas import GraphNode
+
+from tests.graph_contract import validate_intermediate_outputs
 
 ART_ID = "disp:l14133:art6"
 ART_VIGENCIA = {
@@ -119,7 +120,9 @@ def test_todo_output_do_domain_analyzer_valida_no_schema(tmp_path, art_vigencia)
     """Guarda pré-deploy: o graph-builder valida cada nó com model_validate,
     então qualquer nó fora do schema aqui derrubaria o pipeline em produção."""
     intermediate, corpus_dir = _setup(tmp_path, TEXTO_REGEX, art_vigencia)
-    out = _run_and_load(intermediate, corpus_dir)
+    _run_and_load(intermediate, corpus_dir)
 
-    for n in out["nodes"]:
-        GraphNode.model_validate(n)
+    # o norm_analyzer.json daqui é fixture sintético (artigo mínimo), não
+    # produto do agente — o output real é coberto em test_agent_output_schema
+    (intermediate / "norm_analyzer.json").unlink()
+    validate_intermediate_outputs(intermediate)
