@@ -15,11 +15,15 @@ from __future__ import annotations
 from datetime import date
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from . import validador
 
 mcp = FastMCP(
     "amanuense-legislacao",
+    # serviço interno (rede Docker, sem porta publicada): os clientes chegam
+    # por hostname/IP do container, que a proteção de DNS rebinding rejeitaria
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     instructions=(
         "Valida afirmações sobre artigos de lei contra a Base de Legislação "
         "Estruturada do Amanuense (fonte da verdade, redações versionadas no "

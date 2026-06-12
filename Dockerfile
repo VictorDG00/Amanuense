@@ -15,6 +15,8 @@ CMD ["./entrypoint.sh"]
 
 # ── MCP (validação de citações legais via streamable-http) ────────────────────
 FROM api AS mcp
+# o install editable roda antes do COPY do código; o PYTHONPATH garante o import
+ENV PYTHONPATH=/app
 EXPOSE 8765
 CMD ["amanuense", "mcp", "--http", "--port", "8765"]
 
